@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# 运行时
+logs/
+*.log
+
+# 扫描报告（含敏感命中清单，不入库）
+tools/redact-report.md
+
+# 本地环境
+.env
+.idea/
+.vscode/

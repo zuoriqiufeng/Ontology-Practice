@@ -1,0 +1,638 @@
+{
+  "schema": 1,
+  "label": "baseline-v5",
+  "cases": 48,
+  "thresholds": {
+    "full_ratio_drop_pp": 5.0,
+    "partial_ratio_rise_pp": 5.0,
+    "out_chars_p90_rise_pct": 10.0,
+    "per_case_decrease_pct": 10.0,
+    "per_case_increase_pct": 25.0
+  },
+  "env": {
+    "python": "3.9.25",
+    "qdrant_reachable": true,
+    "collection": "demo-product_collection",
+    "chunk_mode": "mini_first",
+    "defer_to_hermes": true
+  },
+  "summary": {
+    "total": 45,
+    "cases": 45,
+    "confidence": {
+      "full": 44,
+      "partial": 1,
+      "none": 0,
+      "EXC": 0,
+      "NO_CALL": 0
+    },
+    "full_ratio": 0.9778,
+    "partial_ratio": 0.0222,
+    "out_chars": {
+      "n": 45,
+      "p50": 817,
+      "p90": 3835,
+      "p99": 7300,
+      "max": 7300,
+      "total": 65408,
+      "percentiles_reliable": true
+    },
+    "corpus_sensitive": {
+      "n": 3,
+      "confidence": {
+        "full": 3,
+        "partial": 0,
+        "none": 0,
+        "EXC": 0,
+        "NO_CALL": 0
+      },
+      "out_chars": {
+        "n": 3,
+        "p50": 28584,
+        "p90": 72969,
+        "p99": 72969,
+        "max": 72969,
+        "total": 122246,
+        "percentiles_reliable": false
+      }
+    }
+  },
+  "records": [
+    {
+      "tool": "query_product",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 503,
+      "args": {
+        "aspect": "overview"
+      },
+      "case_id": "query_product|{\"aspect\": \"overview\"}",
+      "out_chars": 540
+    },
+    {
+      "tool": "query_product",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 568,
+      "args": {
+        "aspect": "positioning"
+      },
+      "case_id": "query_product|{\"aspect\": \"positioning\"}",
+      "out_chars": 540
+    },
+    {
+      "tool": "query_product",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 637,
+      "args": {
+        "aspect": "advantages"
+      },
+      "case_id": "query_product|{\"aspect\": \"advantages\"}",
+      "out_chars": 671
+    },
+    {
+      "tool": "query_product",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 421,
+      "args": {
+        "aspect": "competitors"
+      },
+      "case_id": "query_product|{\"aspect\": \"competitors\"}",
+      "out_chars": 450
+    },
+    {
+      "tool": "query_product",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 3462,
+      "args": {
+        "aspect": "all"
+      },
+      "case_id": "query_product|{\"aspect\": \"all\"}",
+      "out_chars": 3364
+    },
+    {
+      "tool": "explain_architecture",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 1371,
+      "args": {
+        "topic": "full_sync"
+      },
+      "case_id": "explain_architecture|{\"topic\": \"full_sync\"}",
+      "out_chars": 1253
+    },
+    {
+      "tool": "explain_architecture",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 1406,
+      "args": {
+        "topic": "incremental_sync"
+      },
+      "case_id": "explain_architecture|{\"topic\": \"incremental_sync\"}",
+      "out_chars": 1288
+    },
+    {
+      "tool": "explain_architecture",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 1073,
+      "args": {
+        "topic": "topology"
+      },
+      "case_id": "explain_architecture|{\"topic\": \"topology\"}",
+      "out_chars": 1088
+    },
+    {
+      "tool": "explain_architecture",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 428,
+      "args": {
+        "topic": "transaction"
+      },
+      "case_id": "explain_architecture|{\"topic\": \"transaction\"}",
+      "out_chars": 464
+    },
+    {
+      "tool": "explain_architecture",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 3052,
+      "args": {
+        "topic": "all"
+      },
+      "case_id": "explain_architecture|{\"topic\": \"all\"}",
+      "out_chars": 3037
+    },
+    {
+      "tool": "design_solution",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 3728,
+      "args": {
+        "source": "mysql",
+        "target": "oracle",
+        "scenario_hint": "migration"
+      },
+      "case_id": "design_solution|{\"scenario_hint\": \"migration\", \"source\": \"mysql\", \"target\": \"oracle\"}",
+      "out_chars": 3835
+    },
+    {
+      "tool": "design_solution",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 3728,
+      "args": {
+        "source": "oracle",
+        "target": "mysql",
+        "scenario_hint": "auto"
+      },
+      "case_id": "design_solution|{\"scenario_hint\": \"auto\", \"source\": \"oracle\", \"target\": \"mysql\"}",
+      "out_chars": 3835
+    },
+    {
+      "tool": "design_solution",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 3577,
+      "args": {
+        "source": "oracle",
+        "target": "gaussdb",
+        "scenario_hint": "dual_active"
+      },
+      "case_id": "design_solution|{\"scenario_hint\": \"dual_active\", \"source\": \"oracle\", \"target\": \"gaussdb\"}",
+      "out_chars": 3616
+    },
+    {
+      "tool": "check_compatibility",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 2006,
+      "args": {
+        "source": "mysql",
+        "target": "oracle"
+      },
+      "case_id": "check_compatibility|{\"source\": \"mysql\", \"target\": \"oracle\"}",
+      "out_chars": 1806
+    },
+    {
+      "tool": "check_compatibility",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 1997,
+      "args": {
+        "source": "oracle",
+        "target": "dm"
+      },
+      "case_id": "check_compatibility|{\"source\": \"oracle\", \"target\": \"dm\"}",
+      "out_chars": 1797
+    },
+    {
+      "tool": "list_scenarios",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 572,
+      "args": {
+        "keywords": []
+      },
+      "case_id": "list_scenarios|{\"keywords\": []}",
+      "out_chars": 519
+    },
+    {
+      "tool": "list_scenarios",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 270,
+      "args": {
+        "keywords": [
+          "双活"
+        ]
+      },
+      "case_id": "list_scenarios|{\"keywords\": [\"双活\"]}",
+      "out_chars": 303
+    },
+    {
+      "tool": "list_scenarios",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 173,
+      "args": {
+        "keywords": [
+          "大数据"
+        ]
+      },
+      "case_id": "list_scenarios|{\"keywords\": [\"大数据\"]}",
+      "out_chars": 206
+    },
+    {
+      "tool": "diagnose_error",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 675,
+      "args": {
+        "error_code": "-4073"
+      },
+      "case_id": "diagnose_error|{\"error_code\": \"-4073\"}",
+      "out_chars": 829
+    },
+    {
+      "tool": "diagnose_error",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 677,
+      "args": {
+        "error_code": "-4002"
+      },
+      "case_id": "diagnose_error|{\"error_code\": \"-4002\"}",
+      "out_chars": 831
+    },
+    {
+      "tool": "diagnose_error",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 697,
+      "args": {
+        "error_code": "ORA-01555"
+      },
+      "case_id": "diagnose_error|{\"error_code\": \"ORA-01555\"}",
+      "out_chars": 855
+    },
+    {
+      "tool": "diagnose_error",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 676,
+      "args": {
+        "error_code": "-4071"
+      },
+      "case_id": "diagnose_error|{\"error_code\": \"-4071\"}",
+      "out_chars": 830
+    },
+    {
+      "tool": "diagnose_error",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 679,
+      "args": {
+        "error_code": "YAS-02276"
+      },
+      "case_id": "diagnose_error|{\"error_code\": \"YAS-02276\"}",
+      "out_chars": 833
+    },
+    {
+      "tool": "diagnose_error",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 671,
+      "args": {
+        "error_code": "ORA-99999"
+      },
+      "case_id": "diagnose_error|{\"error_code\": \"ORA-99999\"}",
+      "out_chars": 817
+    },
+    {
+      "tool": "get_prerequisites",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 586,
+      "args": {
+        "operation": "activate_node"
+      },
+      "case_id": "get_prerequisites|{\"operation\": \"activate_node\"}",
+      "out_chars": 644
+    },
+    {
+      "tool": "get_prerequisites",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 769,
+      "args": {
+        "operation": "register_db"
+      },
+      "case_id": "get_prerequisites|{\"operation\": \"register_db\"}",
+      "out_chars": 818
+    },
+    {
+      "tool": "get_prerequisites",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 860,
+      "args": {
+        "operation": "create_rule"
+      },
+      "case_id": "get_prerequisites|{\"operation\": \"create_rule\"}",
+      "out_chars": 911
+    },
+    {
+      "tool": "get_prerequisites",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 713,
+      "args": {
+        "operation": "start_rule"
+      },
+      "case_id": "get_prerequisites|{\"operation\": \"start_rule\"}",
+      "out_chars": 771
+    },
+    {
+      "tool": "get_prerequisites",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 625,
+      "args": {
+        "operation": "stop_rule"
+      },
+      "case_id": "get_prerequisites|{\"operation\": \"stop_rule\"}",
+      "out_chars": 686
+    },
+    {
+      "tool": "get_prerequisites",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 951,
+      "args": {
+        "operation": "delete_rule"
+      },
+      "case_id": "get_prerequisites|{\"operation\": \"delete_rule\"}",
+      "out_chars": 1000
+    },
+    {
+      "tool": "get_prerequisites",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 695,
+      "args": {
+        "operation": "compare_table"
+      },
+      "case_id": "get_prerequisites|{\"operation\": \"compare_table\"}",
+      "out_chars": 738
+    },
+    {
+      "tool": "get_prerequisites",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 708,
+      "args": {
+        "operation": "failover"
+      },
+      "case_id": "get_prerequisites|{\"operation\": \"failover\"}",
+      "out_chars": 762
+    },
+    {
+      "tool": "resolve_relation",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 471,
+      "args": {
+        "source_entity": "syncrule",
+        "relation_type": "all"
+      },
+      "case_id": "resolve_relation|{\"relation_type\": \"all\", \"source_entity\": \"syncrule\"}",
+      "out_chars": 485
+    },
+    {
+      "tool": "resolve_relation",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 71,
+      "args": {
+        "source_entity": "symptom:incremental_stuck",
+        "relation_type": "suspected_in"
+      },
+      "case_id": "resolve_relation|{\"relation_type\": \"suspected_in\", \"source_entity\": \"symptom:incremental_stuck\"}",
+      "out_chars": 120
+    },
+    {
+      "tool": "resolve_relation",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 79,
+      "args": {
+        "source_entity": "dimension:consistency",
+        "relation_type": "observed_in"
+      },
+      "case_id": "resolve_relation|{\"relation_type\": \"observed_in\", \"source_entity\": \"dimension:consistency\"}",
+      "out_chars": 126
+    },
+    {
+      "tool": "resolve_relation",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 141,
+      "args": {
+        "source_entity": "process:iahelper",
+        "relation_type": "supervises"
+      },
+      "case_id": "resolve_relation|{\"relation_type\": \"supervises\", \"source_entity\": \"process:iahelper\"}",
+      "out_chars": 182
+    },
+    {
+      "tool": "resolve_relation",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 375,
+      "args": {
+        "source_entity": "syncrule",
+        "relation_type": "has_action"
+      },
+      "case_id": "resolve_relation|{\"relation_type\": \"has_action\", \"source_entity\": \"syncrule\"}",
+      "out_chars": 397
+    },
+    {
+      "tool": "resolve_operation",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 6838,
+      "args": {
+        "operation": "start_rule"
+      },
+      "case_id": "resolve_operation|{\"operation\": \"start_rule\"}",
+      "out_chars": 6722
+    },
+    {
+      "tool": "resolve_operation",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 6970,
+      "args": {
+        "operation": "delete_rule"
+      },
+      "case_id": "resolve_operation|{\"operation\": \"delete_rule\"}",
+      "out_chars": 6847
+    },
+    {
+      "tool": "resolve_operation",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 7386,
+      "args": {
+        "operation": "failover"
+      },
+      "case_id": "resolve_operation|{\"operation\": \"failover\"}",
+      "out_chars": 7300
+    },
+    {
+      "tool": "search_qdrant",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 299,
+      "args": {
+        "dimension": "__report__",
+        "tool_name": "design_solution"
+      },
+      "case_id": "search_qdrant|{\"dimension\": \"__report__\", \"tool_name\": \"design_solution\"}",
+      "out_chars": 299
+    },
+    {
+      "tool": "check_action_risk",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 344,
+      "args": {
+        "action": "delete_sync_rule",
+        "current_state": "RUNNING"
+      },
+      "case_id": "check_action_risk|{\"action\": \"delete_sync_rule\", \"current_state\": \"RUNNING\"}",
+      "out_chars": 344
+    },
+    {
+      "tool": "check_action_risk",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 302,
+      "args": {
+        "action": "register_db",
+        "current_state": "OFFLINE"
+      },
+      "case_id": "check_action_risk|{\"action\": \"register_db\", \"current_state\": \"OFFLINE\"}",
+      "out_chars": 302
+    },
+    {
+      "tool": "check_action_risk",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 318,
+      "args": {
+        "action": "restart_sync_rule",
+        "current_state": "ABNORMAL"
+      },
+      "case_id": "check_action_risk|{\"action\": \"restart_sync_rule\", \"current_state\": \"ABNORMAL\"}",
+      "out_chars": 318
+    },
+    {
+      "tool": "check_action_risk",
+      "confidence": "partial",
+      "gaps": [
+        "缺少关键字段: action"
+      ],
+      "result_chars": 2029,
+      "args": {
+        "action": "",
+        "current_state": ""
+      },
+      "case_id": "check_action_risk|{\"action\": \"\", \"current_state\": \"\"}",
+      "out_chars": 2029
+    },
+    {
+      "tool": "diagnose_db_link",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 20693,
+      "args": {
+        "symptom": "incremental_stuck",
+        "db_type": "oracle"
+      },
+      "case_id": "diagnose_db_link|{\"db_type\": \"oracle\", \"symptom\": \"incremental_stuck\"}",
+      "out_chars": 20693,
+      "corpus_sensitive": true
+    },
+    {
+      "tool": "diagnose_db_link",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 28584,
+      "args": {
+        "symptom": "crash_loop",
+        "db_type": "mysql",
+        "process": "process:iatrack"
+      },
+      "case_id": "diagnose_db_link|{\"db_type\": \"mysql\", \"process\": \"process:iatrack\", \"symptom\": \"crash_loop\"}",
+      "out_chars": 28584,
+      "corpus_sensitive": true
+    },
+    {
+      "tool": "diagnose_db_link",
+      "confidence": "full",
+      "gaps": [],
+      "result_chars": 72969,
+      "args": {
+        "error_code": "-4073",
+        "db_type": "auto"
+      },
+      "case_id": "diagnose_db_link|{\"db_type\": \"auto\", \"error_code\": \"-4073\"}",
+      "out_chars": 72969,
+      "corpus_sensitive": true
+    }
+  ],
+  "observed_deltas_v5_to_v6": {
+    "recorded_at": "2026-10-12",
+    "candidate": "C-20261012-13",
+    "why": "C6：新增约束 node_must_be_INACTIVE 改变 get_prerequisites/resolve_operation 输出；worknode 状态集由 {ONLINE,OFFLINE} 变 {INACTIVE,ONLINE,OFFLINE} 改变 check_action_risk 输出",
+    "cases": {
+      "check_action_risk|{\"action\": \"\", \"current_state\": \"\"}": "2029 → 2162（+6.6%，约束总数增加）",
+      "check_action_risk|{\"action\": \"delete_sync_rule\", \"current_state\": \"RUNNING\"}": "344 → 336（-2.3%）",
+      "check_action_risk|{\"action\": \"register_db\", \"current_state\": \"OFFLINE\"}": "302 → 294（-2.6%）",
+      "check_action_risk|{\"action\": \"restart_sync_rule\", \"current_state\": \"ABNORMAL\"}": "318 → 311（-2.2%）",
+      "get_prerequisites|{\"operation\": \"activate_node\"}": "644 → 838（+30.1%）**已确认**：该动作新增一条可装配约束（node_must_be_INACTIVE），前置段由 1 条变 2 条",
+      "get_prerequisites|{\"operation\": \"delete_rule\"}": "1000 → 984（-1.6%）",
+      "get_prerequisites|{\"operation\": \"register_db\"}": "818 → 810（-1.0%）",
+      "get_prerequisites|{\"operation\": \"start_rule\"}": "771 → 756（-1.9%）",
+      "resolve_operation|{\"operation\": \"start_rule\"}": "6722 → 6768（+0.7%）"
+    },
+    "verdict": "gate ④ 判「✅ 无劣化」（p90 持平 3835；>25% 的 1 例为刻意扩内容，已在候选 review 说明）"
+  }
+}

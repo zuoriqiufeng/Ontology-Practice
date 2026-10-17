@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bkn-ontology-kit"
+version = "0.1.0a0"
+description = "BKN (Business Knowledge Network) ontology kit: spec, runnable reference runtime, and governance toolchain"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [{ name = "BKN contributors" }]
+keywords = ["bkn", "ontology", "knowledge-graph", "agent", "llm"]
+dependencies = ["PyYAML>=6.0"]
+
+[project.optional-dependencies]
+# 可选：向量检索（缺省降级为纯关键词/BM25，不影响 lint 与门禁）
+retrieval = ["qdrant-client>=1.7", "sentence-transformers>=2.2", "jieba>=0.42"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+bkn-lint = "plugin.scripts.lint_bkn:main"
+bkn-metrics = "plugin.scripts.graph_metrics:main"
+
+[tool.setuptools]
+packages = ["plugin", "plugin.scripts"]
+
+[tool.setuptools.package-data]
+plugin = ["*.yaml", "baselines/*.json", "bkn/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["plugin/tests"]
+addopts = "-q"

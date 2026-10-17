@@ -1,0 +1,11 @@
+# plugin/aliases.yaml —— 别名机制 v2（43 号 §7 D11）的数据入口；**本文件是数据，不是代码**。
+#
+# 纪律：
+#   1. 只收「不可生成」的等价说法；码的机械变体（4073 / -4073 / 错误4073 / error 4073）由
+#      Resolver._pattern_code() + plugin/error_codes.yaml 生成，**禁止写进本表**（lint 会报错）。
+#   2. 每条必须有 provenance（来源 + 日期 + 证据），新增走：
+#      python3 plugin/scripts/alias_candidates.py --since YYYY-MM-DD  → 人工审 → 写入本表。
+#   3. canonical 必须是已登记基点（症状 / 维度 / 进程 / 错误码 / 对象），lint 会校验。
+#   4. 实体级别名仍走**同址** frontmatter（.bkn 里 aliases:），不进本表。
+schema: 1
+entries: []   # 首批留空：行为零变化；后续按日志证据增量填

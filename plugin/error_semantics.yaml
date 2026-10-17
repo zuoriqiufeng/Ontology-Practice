@@ -1,0 +1,96 @@
+# plugin/error_semantics.yaml
+# 错误消息的**语义规则**——**这是规则，不是码表**。
+#
+# **为什么不是码表**（用户 2026-10-11 裁定 Q27）：错误码空间随外部世界线性增长
+# （Demo Product 自身数百、各类型数据库合计上万，且会继续涨）——穷举在**任何一层**都无意义
+# （"下延到 Tool 层再列全表"只是把无穷搬了个家）。故本表只描述**有界的语义类别**
+# （＝本体已有的 8 个检查维度，WHAT 轴），按**消息文本**命中，**不按码查表**。
+#
+# **它怎么被用**（链路 v2，62／63 号）——**两个入口，同一套规则**：
+#   ① 只给码  → 官方含义（plugin/error_codes.yaml 的 dimension_map；**仅 status=统一 的码**可信）
+#              → 本表的 **match_official** 词表 → 语义类别
+#   ② 给消息文本 → 本表的 **match** 词表（现场原文）→ 语义类别
+#              → 本体推理（dimension --diagnosed_by--> skill:*、dimension --observed_in--> log:*）→ 排查线
+#
+# **为什么要分两个作用域**（63 号 §3.2）：`match` 是为**现场日志文本**调的（「归档被清理」这类
+# 口语与裸词），而官方含义是**规范措辞**（「规则是运行状态，不能再次启动此规则」）。
+# 把官方措辞塞进 `match` 会让**现场分类**误判外溢（「规则」「状态」是高频词）——
+# 故官方含义走独立的 `match_official`，**`match` 一个字都不动**，现场路径零回归。
+#   若调用方给出 `log_source`（该码出现在哪个进程的日志），嫌疑进程**直接是那个进程**；
+#   没给就**不猜**——只给"该查什么/该找谁/看哪个日志"，并如实说"需要消息文本或日志来源"。
+#
+# **有界性**：规则条数 = 语义类别数（≈8），**不随码数增长**；新增规则须过评审（它是本体侧的类别，
+# 不是台账）。判定顺序 = 文件顺序，**首位命中即返回**（先具体后泛化）。
+#
+# 依据: doc/build/demo-product-bkn/02-bkn_design_philosophy.md §0（本体原则）；32 号 §3/§5
+schema: 1
+measured_at: 2026-10-11
+
+rules:
+  - id: log_readable
+    dimension: dimension:log_readable
+    match: ["归档", "archivelog", "redo", "REDO", "binlog", "wal", "WAL", "复制槽", "replication slot",
+            "位点", "恢复点", "log sequence", "日志被清理", "日志不可读", "位点不连续",
+            "position", "停滞", "未打开", "not open", "apply position"]
+    match_official: ["日志不可读", "日志被清理", "无法读取", "位点不连续"]
+    match_official_deny: ["装载停滞", "装载延迟", "解析停滞"]   # 停滞＝背压/卡顿，不属"日志可读性"（66 号 §7 实测被 m5 回放抓到）   # 装载停滞/延迟 属背压与磁盘，不属日志可读性
+    guide: "查源端日志可读性：归档是否连续/是否被清理、binlog/WAL 配置与保留策略、位点是否推进"
+    skill: skill:demo-product-db-diagnostics
+
+  - id: state_machine
+    dimension: dimension:state_machine
+    match: ["ABNORMAL", "RUNNING", "FULLSYNC", "restart", "重启", "状态冲突", "状态不允许",
+            "禁止", "状态机", "规则状态", "state "]
+    # 【63 号】官方含义专用词表（只吃 plugin/error_codes.yaml 的官方中文含义，不吃现场日志）。
+    # 依据：4071=「规则是运行状态，不能再次启动此规则」、4072=「track是运行或者停止状态，不能进行相应操作」。
+    match_official: ["运行状态", "不能再次启动", "不能进行相应操作", "正在执行"]
+    match_official_deny: ["服务重启", "进程重启"]   # 重启**事件通报**不是状态冲突
+    guide: "查规则/子进程状态机：当前状态是否允许该操作（先 stop 再 start 等前提）"
+    skill: skill:demo-product-rule-manager
+
+  - id: permission
+    dimension: dimension:permission
+    match: ["权限", "insufficient privileges", "无权", "not authorized", "privilege", "grant",
+            "user does not exist", "用户不存在", "授权", "密码", "口令"]
+    match_official: ["认证失败", "token 认证", "token认证", "授权失败"]
+    guide: "查权限与账号：同步用户是否存在、是否具备所需权限（源端读取/目标端建对象）"
+    skill: skill:demo-product-db-diagnostics
+
+  - id: connectivity
+    dimension: dimension:connectivity
+    match: ["listener", "监听", "TNS", "无法连接", "连接失败", "connection refused", "connection reset",
+            "超时", "timeout", "网络", "端口", "防火墙", "主机名", "MTU", "断连", "connection error",
+            "离线", "节点不可达", "control connection"]
+    match_official: ["连接断开", "不可达", "网络异常", "断连"]
+    match_official_deny: ["等待超时", "对比任务", "定时表"]   # 超时过泛：等待/对比任务超时不属连通性
+    guide: "查连通性：网络/端口/监听/防火墙四向排查（含控制通道与 transfer server）"
+    skill: skill:demo-product-log-analyzer
+
+  - id: resource
+    dimension: dimension:resource
+    match: ["No space", "disk full", "空间不足", "磁盘", "磁盘满", "内存", "OOM", "ulimit",
+            "too many open files", "undo", "snapshot too old", "资源", "压力", "堆积", "背压"]
+    match_official: ["超过阈值", "占用超过", "空间不足", "内存不足", "磁盘空间", "磁盘使用限额"]
+    match_official_deny: ["装载错误过多"]   # 主体是装载错误（consistency），阈值只是计数口径
+    guide: "查资源水位：磁盘/内存/inode/ulimit/undo，以及积压与背压来源"
+    skill: skill:demo-product-log-analyzer
+
+  - id: consistency
+    dimension: dimension:consistency
+    match: ["不一致", "mismatch", "差异", "unique constraint", "唯一约束", "cannot insert NULL",
+            "invalid ROWID", "约束冲突", "字符集", "编码", "NLS", "数据类型", "精度", "Direct Path",
+            "array DML", "数据行装载", "字典", "编译", "装载失败", "装载进程", "OBJ INVALID"]
+    match_official: ["装载错误", "备库有装载", "数据错误", "校验失败"]
+    guide: "查两端一致性：schema/字典/字符集/主键与行级数据（按一致位点或时间导出比对）"
+    skill: skill:demo-product-diff-op
+
+  - id: time_sync
+    dimension: dimension:time_sync
+    match: ["时间同步", "时钟", "clock skew", "NTP", "时区", "timezone", "时间不一致"]
+    guide: "查时间同步：时钟偏差与时区（跨节点日志对不齐会误判顺序）"
+    skill: skill:demo-product-product-deploy
+
+#: 兜底（**不猜**）：以上都不命中 → 未归类；如实说明"含义未识别"，给检索与取证指引。
+fallback:
+  dimension: dimension:unknown
+  guide: "含义未识别：① 带上该码的**日志消息文本**再问一次（语义规则按文本命中）；② 用 search_qdrant 检索模式库（store:log_patterns_collection）；③ 仍无结论 → 记 gap_log，走缺口闭环"

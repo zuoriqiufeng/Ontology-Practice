@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "kind": "baseline",
+  "measured_at": "2026-10-12",
+  "source": "plugin/relations.py::RelationTraverser + bkn/relations/*.bkn",
+  "remeasure": "python3 plugin/scripts/graph_metrics.py",
+  "env": {
+    "python": "3.9.25"
+  },
+  "metrics": {
+    "nodes": 197,
+    "edges": 210,
+    "relation_type_count": 24,
+    "ingraph_relation_sections": 25,
+    "constrained_by_edges": 27,
+    "edges_by_type": {
+      "connects_to": 8,
+      "constrained_by": 27,
+      "constrains": 6,
+      "consumes": 3,
+      "diagnosed_by": 10,
+      "feeds": 3,
+      "has_action": 37,
+      "has_class": 3,
+      "implements": 10,
+      "implements_skill": 37,
+      "monitors": 1,
+      "observed_in": 7,
+      "prerequisite": 10,
+      "produces": 1,
+      "reads_from": 1,
+      "registered_on": 1,
+      "requires": 10,
+      "risks_of": 12,
+      "runs_on": 3,
+      "supervises": 5,
+      "supports": 5,
+      "suspected_in": 8,
+      "writes_to": 1
+    }
+  },
+  "notes": {
+    "authorized_shrink": "**两次授权收缩（不是劣化）**：① [Q27，2026-10-11] 错误码退出本体——删 21 行码边（18 suspected_in + 3 has_class）+ 3 处 risks_of 码引用；同批按「类有界、边可增」补 8 条有界边（dimension --diagnosed_by/observed_in--> skill/log）。净变化 nodes 206→198 / edges 223→211。② [02 号 §0 第七条，2026-10-12] 症状类集收口——撤 `symptom:process_crash`（零结案案例、写不出必要判据、与 crash_loop 重叠；复审见 doc/optimize/34 号）。净变化 nodes 198→197 / edges 211→210。判定口径：以上为**授权收缩**，自本基线起恢复「只增不减」。",
+    "ingraph_relation_sections": "grep -h '**关系类型**:' bkn/relations/*.bkn | wc -l —— 含 O-域与运行时对象域的边段",
+    "relation_type_count_history": "RELATION_TYPES 白名单长度（20 号阶段 1 起为 24，机制域扩 27 后随 M-1 撤回回到 24）",
+    "constrained_by_edges": "与 constraints.bkn 的约束 ID 双向对齐（lint _check_constraint_edge_alignment）"
+  },
+  "regression_rule": "结构量只增不减（16 号 §5 不变量 2 口径）：nodes/edges/relation_type_count/ingraph_relation_sections/constrained_by_edges 任一项低于基线 → 判为劣化（22 号 §5）。**例外（两次，一次性）**：2026-10-11 的去码（Q27）与 2026-10-12 的症状收口（第七条）为授权收缩，见 notes.authorized_shrink；自本基线起恢复「只增不减」。",
+  "observed_deltas_v1_to_v2": {
+    "recorded_at": "2026-10-12",
+    "candidate": "C-20261012-13",
+    "why": "C6：worknode 状态机规范化 + 新增约束 node_must_be_INACTIVE 与 constrained_by 边 → 结构量 +1 节点 +1 边（只增不减，非劣化）",
+    "before": {
+      "nodes": 197,
+      "edges": 210,
+      "constrained_by_edges": 27
+    },
+    "after": {
+      "nodes": 198,
+      "edges": 211,
+      "constrained_by_edges": 28
+    }
+  }
+}

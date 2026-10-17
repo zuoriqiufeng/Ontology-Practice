@@ -1,0 +1,195 @@
+# plugin/relation_consumers.yaml
+# 关系类型 × 消费者矩阵（22 号批 3-1，不变量 I3）
+#
+# 用途：任何关系类型的增删改，都能一眼看出「谁在读它」——把"删一种边是否安全"
+#       从「人肉 grep」变成「可回归的断言」（对位 26 号 uses_tool 的处置先例：
+#       核实无消费者后移除）。
+#
+# 契约（由 plugin/tests/test_relation_consumers.py 强制）：
+#   ① `types` 的键集必须与 plugin/relations.py::RelationTraverser.RELATION_TYPES 完全相等
+#      （双向：不漏登记，也不许幽灵键）；
+#   ② `python_consumers` 为空的类型，必须写 `no_python_consumer_note` 说明为何保留。
+#
+# 两类消费者的区别（关键）：
+#   python     —— Python 侧读边并**判定语义**（影响 Tool 输出 / 置信度 / 风险拦截）
+#   agent_only —— 仅经 `resolve_relation(relation_type=…)` 通用出口暴露给 Agent，
+#                 Python 不判语义（能查到 ≠ 被使用）
+schema: 1
+measured_at: 2026-10-12
+consumer_classes:
+  python: "Python 侧读边并判定语义（影响 Tool 输出 / 置信度 / 风险拦截）"
+  agent_only: "仅经 resolve_relation 通用出口暴露给 Agent；Python 不判语义"
+
+# ── 横切消费：边语义求值器（38 号批 2）────────────────────────────────
+# `plugin/relations.py::walk()/reachable()` 按 `plugin/edge_semantics.yaml` 的
+# `walk_policy.traversable` 做**通用**展开（不判单类型语义，故不逐类型登记——逐条登记会
+# 被误读为"判语义"）。该清单与 RELATION_TYPES 的交叉锁在
+# `plugin/tests/test_edge_semantics.py`（删边/改名即红）；逐类型语义消费者仍以 types 为准。
+walk_policy_consumers:
+  - "plugin/relations.py — walk()/reachable()（读 walk_policy.traversable 全集）"
+  - "plugin/tools.py — resolve_relation(depth>1) 的 paths 段（38 号批 2）"
+
+types:
+
+  # ── python 类（Python 读边并判定语义）──────────────────────────────
+  suspected_in:
+    class: python
+    python_consumers:
+      - "plugin/tools.py:506 — _resolve_diagnosis_path（症状/错误码 → 进程）"
+      - "plugin/resolver.py:868 — get_risk() 的 suspected_process 字段"
+      - "plugin/resolver.py:941 — get_symptom_skills()"
+      - "plugin/resolver.py:977 — _skills_for_error_code()"
+      - "plugin/resolver.py:1163,1166 — get_processes_for_symptom()"
+
+  has_class:
+    class: python
+    python_consumers:
+      - "plugin/relations.py:188 — get_classes_for_symptom()"
+      - "plugin/resolver.py:870 — get_risk() 的 dimensions 字段"
+      - "plugin/resolver.py:1009 — _skills_for_error_code() 跨切面回退"
+      - "plugin/tools.py:173 — _diag_class_extra()（gap 的 classes 字段）"
+
+  diagnosed_by:
+    class: python
+    python_consumers:
+      - "plugin/relations.py:194 — get_skills_for_class()"
+
+  observed_in:
+    class: python
+    python_consumers:
+      - "plugin/relations.py:206 — get_logs_for_class()（有序＝查看顺序，禁止走 expand）"
+
+  constrained_by:
+    class: python
+    python_consumers:
+      - "plugin/relations.py:182 — get_constraints_for_action()"
+      - "plugin/resolver.py:1387 — get_prerequisites() 装配"
+      - "plugin/risk_guard.py:314-328 — 三源 join 装配规则"
+
+  implements_skill:
+    class: python
+    python_consumers:
+      - "plugin/relations.py:173 — get_skills_for_action()"
+
+  feeds:
+    class: python
+    python_consumers:
+      - "plugin/resolver.py:546 — get_log_map()（进程链）"
+      - "plugin/resolver.py:1192 — get_process_chain()"
+
+  supervises:
+    class: python
+    python_consumers:
+      - "plugin/resolver.py:548 — get_log_map()"
+
+  monitors:
+    class: python
+    python_consumers:
+      - "plugin/resolver.py:550 — get_log_map()"
+
+  prerequisite:
+    class: python
+    python_consumers:
+      - "plugin/tools.py:380 — design_solution 的 prerequisites 字段"
+      - "plugin/supplement.py:325 — _deep_check 缺失判定（≠ 触发 gap）"
+
+  constrains:
+    class: python
+    python_consumers:
+      - "plugin/tools.py:381 — design_solution 的 constraints 字段"
+      - "plugin/supplement.py:325 — _deep_check 缺失判定"
+
+  risks_of:
+    class: python
+    python_consumers:
+      - "plugin/tools.py:382 — design_solution 的 risks 字段"
+      - "plugin/supplement.py:325,360 — _deep_check（risks_of 条数 < min_risk_count → gap）"
+      - "plugin/risk_guard.py:316 — 三源 join 装配规则"
+
+  requires:
+    class: python
+    python_consumers:
+      - "plugin/supplement.py:325 — _deep_check 缺失判定（design_solution 的 relations 里缺 requires → gap）"
+
+  # ── agent_only 类（仅通用出口；Python 不判语义）─────────────────────
+  references:
+    class: agent_only
+    python_consumers: []
+    no_python_consumer_note: "对象→对象的一般引用；仅经 resolve_relation 通用出口可查。保留理由：语义骨架的一部分（references.bkn 5 段），供 Agent 自行展开；无 Python 判定需求。"
+
+  runs_on:
+    class: agent_only
+    python_consumers: []
+    no_python_consumer_note: "承载关系（对象/单元/进程 → 底座）。保留理由：25 号结构链的组成部分，结构查询由 Agent 经 resolve_relation 使用；Python 侧尚未据其判定（如「进程跑在哪台机」的自动推导）。"
+
+  registered_on:
+    class: agent_only
+    python_consumers: []
+    no_python_consumer_note: "dbnode → worknode 注册关系。同上，结构链组成部分。"
+
+  supports:
+    class: agent_only
+    python_consumers: []
+    no_python_consumer_note: "产品/架构 → 场景支持关系。保留理由：design_solution 走 scenario 展开时可达，但目前只抽取 prerequisite/constrains/risks_of 三类。"
+
+  reads_from:
+    class: agent_only
+    python_consumers: []
+    no_python_consumer_note: "syncrule → dbnode（源端角色）。16 号批 0-3 由节点名后缀改判为边类型（消除虚节点）；保留理由：源端/目标端语义需可查，但尚无 Python 判定。"
+
+  writes_to:
+    class: agent_only
+    python_consumers: []
+    no_python_consumer_note: "syncrule → dbnode（目标端角色）。同 reads_from。"
+
+  consumes:
+    class: agent_only
+    python_consumers: []
+    no_python_consumer_note: "process:* → dbnode（读数据，源端）。runtime 域拓扑的一部分；diagnose_db_link 目前走 suspected_in+feeds 派生，未直接用 consumes 区分源端。"
+
+  produces:
+    class: agent_only
+    python_consumers: []
+    no_python_consumer_note: "process:* → dbnode（写数据，目标端）。同 consumes。"
+
+  connects_to:
+    class: agent_only
+    python_consumers: []
+    no_python_consumer_note: "link:* → 单元（链路两端，25 号新增）。保留理由：链路诊断的拓扑基础；尚无 Python 判定（端口不通类症状仍未接图）。"
+
+  has_action:
+    class: agent_only
+    python_consumers: []
+    no_python_consumer_note: "对象 → 动作（37 条）。保留理由：resolve_operation 走的是 action 段的 capability/implements 字段而非此边；此边供 Agent 反查「这个对象能做什么」。**待评审项**：是否应让某 Tool 改走此边。"
+
+  implements:
+    class: agent_only
+    python_consumers: []
+    no_python_consumer_note: "⚠ **同名陷阱**：此「边」（scenario.bkn 的 主体→技术/架构，10 条）**无消费者**；生产代码里被读的 `implements` 是 **Action 段的字段**（`- implements: skill:xxx`，见 resolver.py:1292 / tools.py:643），两者同名不同物。保留理由：语义层的「实现关系」；**待评审项**：是否需要在代码/文档中改名为避免混淆。"
+
+  # ── M-域（机制层；形已立、内容待填）────────────────────────────────
+
+  subclass_of:
+    class: python
+    python_consumers:
+      - "plugin/relations.py — _ancestors()/_targets_tagged()（类层次的传递闭包与继承展开）"
+
+  triggers:
+    class: agent_only
+    python_consumers: []
+    no_python_consumer_note: "机制 → 机制（直接触发）。**形已立、内容待填**（映射规则为空）。保留理由：机制层「事故线」的骨架边；M-域整体被 relations.py 的继承展开按域读取（横切，不判单类型语义），故不逐条登记 python 消费者。"
+
+  amplifies:
+    class: agent_only
+    python_consumers: []
+    no_python_consumer_note: "机制 → 机制（间接放大/传导）。同上（形已立、内容待填）。"
+
+  manifests_as:
+    class: agent_only
+    python_consumers: []
+    no_python_consumer_note: "机制 → 症状/维度（表现）。**内容已填**（C-20261013-03：7 条映射，3 机制 × symptom:/dimension:）：机制集不再为空。仍无 python 消费者——M-域整体由 relations.py 的继承展开按域读取（横切，不判单类型语义），故不逐条登记。生成期一致性由 lint 按 `RELATION_TARGET_NAMESPACES` 查（豁免表已随之退役）。"
+
+  mitigated_by:
+    class: agent_only
+    python_consumers: []
+    no_python_consumer_note: "机制 → 约束/动作（屏障）。同上（形已立、内容待填）。"

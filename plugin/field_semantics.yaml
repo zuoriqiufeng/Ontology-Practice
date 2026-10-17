@@ -1,0 +1,145 @@
+# plugin/field_semantics.yaml
+# 字段语义字典（29 号 §4.3；30 号 W0-7）
+#
+# **为什么需要**：判据要比较字段（如 delay > 阈值），而**字段语义是前置**——不知道单位就
+# 无法判"卡没卡"。2026-10-08/09 现场报告的 D2 案例正是卡在这里：
+# 会话拿到 `delay=719849000` 后无法定论——若为 ms ≈ 8.3 天（高度异常）；若为 s ≈ 23 年（荒谬）。
+#
+# 本表把"字段语义"从隐性知识变成**可查、可标注状态**的字典。三类状态：
+#   confirmed     —— 有出处（仓库内 or **现场已确认**），可直接用于判据
+#   unknown_unit  —— 字段存在但**单位未知**（须现场确认后才能写判据）
+#   pending_field —— 需现场确认字段是否存在/名称/取数位置
+#
+# 另有 `refinements`：**不阻塞判据**的细化缺口（取值全集、窗口语义、阈值口径…）。
+# 它**不改变 status**——判据现在就能写，写得更准还要它；写出来只为不让缺口静默。
+#
+# 定位：Tool 层值数据（与 constants.py / provenance.yaml 同层），**不进本体**
+#      （26 号零元信息：本体只含定义/关系/实例登记）。
+#
+# 依据：29 号 §4.3；2026-10-08/09 现场报告 D2；30 号 W0-7
+schema: 1
+measured_at: 2026-10-10
+# 2026-10-13：用户逐条给出 D2 的 5 个待确认字段 ⇒ `pending_field` 归零（见各条 evidence）
+field_material_at: 2026-10-13
+
+status_legend:
+  confirmed: "有出处（仓库内 or 现场已确认），可直接用于判据"
+  unknown_unit: "字段存在但单位未知——须现场确认后才能写判据"
+  pending_field: "需现场确认字段是否存在/名称/取数位置"
+
+sources:
+  log_track: "<iadata>/log/<uuid>/track_*.log（增量解析日志）"
+  log_load: "<iadata>/log/<uuid>/load_*.log（装载日志）"
+  state_rule: "/stream/state/rule/<component>/<UUID>（etcd 规则状态记录）"
+
+fields:
+
+  # ── 日志侧（有出处，可判）──────────────────────────────────────────
+  - name: "Analyzer delay"
+    source: log_track
+    status: confirmed
+    unit: "见值本身——同一字段在日志里出现过 `N sec` 与 `N ms` 两种写法（见 evidence），判读时须按实际后缀"
+    normal_range: "约 1 sec（dml-not-synced-track-diagnosis.md:135 『delay 1 sec → 正常』）"
+    abnormal: "持续增长 = 增量滞后（同文件:136『delay 持续增长 → 增量滞后』；:145 表『Analyzer delay 持续增大 | 增量滞后 | 检查 Loader 消费速度』）"
+    evidence:
+      - "skill/demo-product-node-inspection/references/node-dir-map.md:29 — 『track_YYYY-MM-DD.log — 增量解析: Analyzer delay N sec 延迟秒数』"
+      - "skill/demo-product-log-analyzer/references/dumptxn-tf-analysis-workflow.md:75 — 日志原文含 `delay 313 ms`"
+      - "skill/demo-product-full-dump-monitoring/references/case-ora19c-speed-calc.md:82 — 『增量延迟: 约 100 秒 (delay 100698 ms)』"
+      - "skill/demo-product-log-analyzer/references/dml-not-synced-track-diagnosis.md:132,135-136,145,168 — 判读规则与取数命令（`grep 'Analyzer delay' $LOG_DIR/track_*.log | tail -5`）"
+
+  - name: "IPC startload 之后的 delay 空缺"
+    source: log_track
+    status: confirmed
+    unit: "—（存在性判读，非数值）"
+    abnormal: "『IPC startload 后长时间无 delay → 可能卡住』"
+    evidence:
+      - "skill/demo-product-log-analyzer/references/dml-not-synced-track-diagnosis.md:168"
+
+  - name: "rule_status（监控属性）"
+    source: state_rule
+    status: confirmed
+    unit: "枚举（非数值）"
+    values: "STREAM_RULE_STOP / STREAM_RULE_RUNNING / STREAM_RULE_ABNORMAL"
+    evidence:
+      - "bkn/objects/syncrule.bkn 「监控属性」段 — rule_status / export.status / parse.status / load.status / delay / bytes"
+
+  # ── state 记录侧（零出处，D2 案例的实际卡点）────────────────────────
+  - name: delay
+    source: state_rule
+    status: unknown_unit
+    unit: "⚠ **未知**——D2 案例的阻塞点：719849000 若为 ms ≈ 8.3 天（高度异常）；若为 s ≈ 23 年（荒谬）"
+    normal_range: "待现场确认"
+    abnormal: "待现场确认（无法在单位未定前写判据）"
+    evidence:
+      - "2026-10-08/09 现场报告 D2：会话记录 `规则 DB13647E-… delay=719849000, max_delay=720216000`，并明确记录『单位不同』的纠结而未定论"
+    needed: "现场执行：读同一条规则的 track 日志 `Analyzer delay` 数值，与 state 的 delay 值比对量级 → 定单位"
+
+  - name: max_delay
+    source: state_rule
+    status: unknown_unit
+    unit: "**最大值**（时间量）——**单位待定**：须与 `delay` 同单位方可比对"
+    abnormal: "候选判据：`delay` 远低于 `max_delay` 且不回落 = 曾严重滞后"
+    evidence:
+      - "2026-10-08/09 现场报告 D2（同上一条）"
+      - "**用户现场答复（2026-10-13）**：`max_delay` ＝ **最大值**"
+    refinements: "① **单位**（与 `delay` 是否同单位；D2 两值量级相同：max_delay 720216000 vs delay 719849000 ⇒ 同单位可能性大，但**未获确认**）② 「最大值」的**窗口语义**——滚动窗口最大 还是 历史峰值（本次答复未细分）③ 是否随 `delay` 回落而回落"
+    needed: "现场确认：单位（须定单位才能写判据）"
+
+  - name: dml_fail
+    source: state_rule
+    status: confirmed
+    unit: "计数——**累计**失败数量（**不是**连续失败数）"
+    normal_range: "0"
+    abnormal: "> 0 且随时间**增大** = 失败在累积（D2：多条 track 的 `doing` 携带 dml_fail=1000/2000/7000）"
+    evidence:
+      - "**用户现场答复（2026-10-13）**：`dml_fail` ＝ **累计失败数量**"
+      - "2026-10-08/09 现场报告 D2（`doing` 携带 dml_fail 的具体值）"
+    refinements: "是否会自愈；是否 per-table（两项均**不影响**主判据）"
+
+  - name: stage
+    source: state_rule
+    status: confirmed
+    unit: "枚举（状态机阶段；7 值，见 values）"
+    values: |
+      none    = TASK_STAGE_NONE    未运行（所有服务受用）
+      prepare = TASK_STAGE_PREPARE 准备中（track 受用；增量解析前导出数据字典时一般返回该状态）
+      doing   = TASK_STAGE_DOING   进行中（所有服务受用）
+      stop    = TASK_STAGE_STOP    停止（所有服务受用）
+      done    = TASK_STAGE_DONE    完成（migrate / export / import 受用）
+      ????    = TASK_STAGE_CAPTURE 捕获（**iaproxy 专用**，其他服务不可用；当 track 状态为 doing 而 load 状态为
+                                     stop 时，iaproxy 将 track 置为捕获状态）—— **对应字符串本次未给**
+      unknown = TASK_STAGE_MAX     未知（所有服务受用；注意枚举名是 MAX、字符串是 unknown）
+    evidence:
+      - "2026-10-08/09 现场报告 D2（`stage=doing`）"
+      - "doc/process/bug-analysis/CASE-0003-…md:16（`4050 Stage task failed: stage=d-pq-to-dbms_0 seqno=125~128`）"
+    abnormal: "候选判据：① `stage=doing` 长期不变且 `dml_fail` 增大 = 卡住；② `load` 为 `stop` 而 `track` 为 `doing` ⇒ 先看是否已被 iaproxy 置为**捕获**（`none`/`unknown` 出现即状态机自身不明）"
+    refinements: "① **`TASK_STAGE_CAPTURE` 的对应字符串本次未给**——缺它则 `stage` 日志判读漏一值（其余 6 值已给全）② CASE-0003 的 `stage=d-pq-to-dbms_0` 形态（带 `-` 与序号）与本 7 值的对应关系未明：是**另一层命名**还是同一枚举的扩展值"
+
+  - name: state_time
+    source: state_rule
+    status: confirmed
+    unit: "时间戳——该状态**上送**的时刻（＝「当前上送状态时间」）"
+    abnormal: "候选判据：`state_time` 距今多久 = 状态多久**没上送**（阈值口径见 refinements）"
+    evidence:
+      - "**用户现场答复（2026-10-13）**：`state_time` ＝ **当前上送状态时间**"
+      - "2026-10-08/09 现场报告 D2"
+      - "plugin/context_loader.py 的 TrimFilter 冗余字段列表含 state_time（_REDUNDANT_FIELDS / 正则，说明它出现在 Tool 输出里）"
+    refinements: "正常**刷新间隔**——决定「多久没上送算卡住」的**阈值**（属判据阈值，非字段语义；可与 M-3 判据表同批定）"
+
+  - name: last_op
+    source: state_rule
+    status: confirmed
+    unit: "枚举——**上次**对该规则执行的操作（D2 见 `resume`）"
+    abnormal: "候选判据：`last_op=resume` 且 `delay` 巨大 = 恢复后未推进"
+    evidence:
+      - "**用户现场答复（2026-10-13）**：`last_op` ＝ **上次规则操作**"
+      - "2026-10-08/09 现场报告 D2（`last_op=resume`）"
+    refinements: "① **取值全集**（本次只给语义、未给全集）② `resume` 是否＝**从断点恢复**未明说③ 它在什么条件下被写入"
+
+# ── 本表的不变量（由 plugin/tests/test_field_semantics.py 强制）────────
+invariants:
+  - "每个字段必须有 name / source / status；status ∈ {confirmed, unknown_unit, pending_field}"
+  - "status=confirmed 的字段必须有非空 evidence"
+  - "unknown_unit / pending_field 的字段必须有非空 needed（写清现场要确认什么），否则就是把缺口静默留下"
+  - "缺口分两层：**阻塞判据**的写 `needed`（必填，随 status）、**不阻塞判据**的写 `refinements`（可选，防静默）——2026-10-13 现场素材到位后，remaining 缺口一律走后者"
+  - "26 号约束：本表是 Tool 层值数据，**不得**被 bkn/** 引用（本体只含定义/关系/实例登记）"

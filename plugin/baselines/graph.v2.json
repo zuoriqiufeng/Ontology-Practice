@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "kind": "measured",
+  "metrics": {
+    "nodes": 198,
+    "edges": 211,
+    "relation_type_count": 24,
+    "ingraph_relation_sections": 25,
+    "constrained_by_edges": 28,
+    "edges_by_type": {
+      "connects_to": 8,
+      "constrained_by": 28,
+      "constrains": 6,
+      "consumes": 3,
+      "diagnosed_by": 10,
+      "feeds": 3,
+      "has_action": 37,
+      "has_class": 3,
+      "implements": 10,
+      "implements_skill": 37,
+      "monitors": 1,
+      "observed_in": 7,
+      "prerequisite": 10,
+      "produces": 1,
+      "reads_from": 1,
+      "registered_on": 1,
+      "requires": 10,
+      "risks_of": 13,
+      "runs_on": 3,
+      "supervises": 5,
+      "supports": 5,
+      "suspected_in": 8,
+      "writes_to": 1
+    }
+  },
+  "observed_deltas_v2_to_v3": {
+    "recorded_at": "2026-10-12",
+    "candidate": "C-20261012-14",
+    "why": "M-0：新增 5 条关系类型（triggers/amplifies/manifests_as/mitigated_by/subclass_of）→ relation_types 24→29、ingraph_sections 25→30；nodes/edges 不变（边为空，只立形态）",
+    "before": {
+      "nodes": 198,
+      "edges": 211,
+      "relation_types": 24,
+      "ingraph_sections": 25,
+      "constrained_by_edges": 28
+    },
+    "after": {
+      "nodes": 198,
+      "edges": 211,
+      "relation_types": 29,
+      "ingraph_sections": 30,
+      "constrained_by_edges": 28
+    }
+  }
+}

@@ -1,0 +1,139 @@
+# plugin/edge_semantics.yaml — 边语义字典（38 号批 2＝37 号 §3-A 的落地）
+#
+# **这是「边语义」，不是关系类型清单，也不是码表**。它只回答一件事：
+# 已入图的边**怎么走**——给 `RelationTraverser` 的只读求值器（walk/reachable）声明可走法。
+#
+#   transitive   ：该类型的边可传递（A→B、B→C ⇒ A→C）
+#   compositions ：跨类型两段复合（如 库 --registered_on→ 节点 --runs_on→ 主机）
+#   symmetric    ：无向（文件已声明「无向」；声明后求值器可**反向**从单元查到链路）
+#   walk_policy  ：通用展开的可穿越边集 / 端点类型 / 上限（防泛走噪音）
+#
+# **纪律**（承 37 号 §4 与 02 号 §0 第七条）：
+#   ① 本表**不新增关系类型、不新增本体元素**——只把「文件里已经这么写、代码里已经这么用」
+#      的语义显式化（有界性：条数 ≤ 关系类型数，不随实例/版本/客户增长）；
+#   ② `bkn/**` **不得引用本表**（值数据下沉；同 `field_semantics.yaml` 的守卫）；
+#   ③ 新增语义须过评审（第七条④ 先论证后落）——A2 的理由见其注释；
+#   ④ 求值器**不物化**：派生路径按需求值，不写回 graph / 基线（37 号 Q3）；
+#   ⑤ **不能推就删**（2026-10-13 裁定）：声明若既无消费方、又与实现**矛盾** ⇒ 删键，不留误导；
+#      若只是「未接线」而语义为真 ⇒ 保留并**如实标注「声明性」**（见 `transitive`/`compositions`）。
+#
+# 依据: doc/optimize/38-graph-reasoning-execution-plan.md §3.2；37 号 §3-A
+schema: 1
+measured_at: 2026-10-13
+
+transitive:
+  # ✅ **已接线**（C-20261013-04）：本键由求值器**读取并承重**——
+  #    `_ancestors`/`_descendants`（`subclass_of` 类继承）与 `transitive_targets`
+  #    （`resolver.get_process_chain` 沿 `feeds` 的链式扩展）都以**本集合为闸门**：
+  #    摘掉任一声明 ⇒ 对应能力**可观测地关闭**（继承失效 / 进程链退化为单点）。
+  #    `runs_on` 的两级链仍由 `walk_policy.traversable` 的普通多跳走通（不另设闸门）。
+  #    消费者清单（内联，避免与其它候选共享 sidecar 文件）：
+  #      · relations.py — _ancestors()/_descendants()（subclass_of 类继承的闸门）
+  #      · relations.py — transitive_targets()（单条边的一跳闸门）
+  #      · resolver.py — get_process_chain()（沿 feeds 的链式扩展）
+  #      · relations.py — closure()；tools.py — resolve_relation(relation_type=closure)
+  # A1：链式语义已在代码里按传递使用（resolver.get_process_chain 沿 feeds 做 BFS），此处显式化
+  - feeds
+  # A2（评审项）：承载链的两级是同一语义——`syncrule → worknode`（对象被调度到节点执行）
+  #    ＋ `worknode → host`（节点运行在主机上）⇒ 对象承载于主机。两段都写在 topology.bkn 里，
+  #    传递成立；如评审有异议，只摘除本条，其余语义不受影响。
+  - runs_on
+  # C-20261012-14（42 号 Q2）：类层次自身传递——A ⊑ B ⊑ C ⇒ A 继承 C 的边
+  - subclass_of
+
+compositions:
+  # ✅ **已接线**（C-20261013-04）：`relations.py::closure()` 按 `seq` 顺序走完两段，
+  #    产出 `kind=composition` 且带复合名的路径；对外经 `resolve_relation(relation_type=closure)` 可见
+  #    （工具出口是该键**唯一**的可见面）。清空本表 ⇒ 该出口不再产出复合腿。
+  #    与「普通多跳也能走通」不冲突：多跳给的是**无名的两跳路径**，本键给的是**有名字的复合**。
+  #    消费者清单（内联，同 `transitive`）：
+  #      · relations.py — closure()（按 seq 顺序走完两段）
+  #      · tools.py — resolve_relation(relation_type=closure)（复合腿**唯一**的对外可见面）
+  # A3：库 --registered_on→ 节点 --runs_on→ 主机（库的承载底座）
+  - id: registered_on_then_runs_on
+    seq: [registered_on, runs_on]
+
+symmetric:
+  # A5：`connects_to` 文件已声明「无向连接」（`link:*` → 两端单元各一条边）。
+  #     现实缺口在**反向**：单元侧查不到自己所连的链路（探针实测需全图扫描）。
+  - connects_to
+
+# ⚠ `reverse_ok` 已于 2026-10-13 **删除**（裁定「**不能推就删**」）：它既无消费方（R-1 纸上公理），
+#   又与实现**矛盾**——声称 gate 反查，而求值器对**所有可穿边**一律放行 `direction=in`
+#   （`plugin/relations.py` 的 walk）。反向查询能力由 `walk_policy.traversable` 单独提供，
+#   不需要本键。**勿重新引入**——`plugin/tests/test_edge_semantics_injection.py` 有 tripwire。
+
+domains:
+  # 关系类型 → 域归属（与 bkn/relations/RELATION_TYPES.md 的域分组同源；机器可读版本）
+  # 纪律：键集须恰好等于 relations.RELATION_TYPES（lint _check_domain_map_consistency 强制，防漂移与幽灵键）。
+  "B-域": [runs_on, registered_on, supports, requires, constrains, implements, has_action, references, prerequisite, implements_skill, constrained_by, risks_of, reads_from, writes_to]
+  "O-域": [has_class, diagnosed_by, observed_in]
+  "运行时对象": [feeds, supervises, consumes, produces, monitors, suspected_in]
+  "结构": [connects_to]
+  # 机制域分**两侧**（C-20261012-16）：方向语义不同，故按构造分开声明。
+  "M-因果": [triggers, amplifies, manifests_as, subclass_of]
+  "M-屏障": [mitigated_by]
+inherited_domains:
+  # **按域**声明「哪些域的边会被子类继承」（**出边**方向）——不逐边列举（42 号 Q2：逐边列举＝隐性枚举）。
+  # 与 `walk_policy.traversable` 是两个不同的白名单（一个管能不能走、一个管能不能继承），互不替代。
+  # 失败方向：默认不继承 ⇒ 漏配只是「少继承」（安全侧），不会让影响面悄悄变大。
+  - "M-因果"
+  - "M-屏障"
+
+inherited_incoming_domains:
+  # **入边**方向的可继承域（C-20261012-16）。语义：A 触发**子**机制 ⇒ 也触发了**父**机制
+  # （子类的发生是父类发生的一个实例），故查「谁触发了 P」时应纳入 P 的后代入边。
+  # **只限因果侧**：屏障（mitigated_by）挂在具体机制上，且其目标是裸名约束 ID（**不是类、无后代**），
+  # 反向传播在此处本就是空转——显式排除是为了「按构造正确」而非「碰巧正确」。
+  - "M-因果"
+
+walk_policy:
+  # 可穿边集：结构 / 拓扑 / 诊断路由 + 机制 + B 域声明（2026-10-13 裁定 1-C / 裁定 2）
+  # 放行依据（02 号第七条④ 先论证后落）：
+  #   ① 机制四边（triggers / amplifies / manifests_as / mitigated_by）——机制层的唯一入口，
+  #      不放行则机制层永远不可达（L4 的 walkability=0 的直接原因）；
+  #   ② B 域六条（requires / constrains / implements / references / prerequisite / supports）——
+  #      放行前与 has_action/constrained_by/risks_of 一起被排除，但**只有后三条有论证**，
+  #      前六条属「顺手跟域一起排掉」，裁定 2 判为放行；
+  #   ③ subclass_of——类层次自身（A ⊑ B 时 A 继承 B 的可继承域），裁定 2「要」。
+  # **仍不含**：implements_skill（37 条，目标 skill:* 已在 stop_at，放行只让它早一跳到达并暴露内部 Skill 名）、
+  #   has_action / constrained_by / risks_of（动作域与风险域，原论证保留）。
+  traversable:
+    - feeds
+    - supervises
+    - consumes
+    - produces
+    - monitors
+    - runs_on
+    - registered_on
+    - connects_to
+    - reads_from
+    - writes_to
+    - suspected_in
+    - diagnosed_by
+    - observed_in
+    - has_class
+    - triggers
+    - amplifies
+    - manifests_as
+    - mitigated_by
+    - requires
+    - constrains
+    - implements
+    - references
+    - prerequisite
+    - supports
+    - subclass_of
+  # 端点：到达即以该节点结束展开，不再向外（避免穿到 Skill 正文/日志域里继续走）
+  # 2026-10-13 裁定 1-C：加 `mechanism:` —— 用**节点前缀**实现「机制↔机制最多 1 跳」的跳数预算
+  #   （walk_policy 无 per-edge 跳数上限；前缀停驻是最省改动的等价手段）。
+  # 2026-10-13 裁定 3：删 `store:` —— 全图 0 个 store: 节点（死配置，不能推就删）。
+  stop_at:
+    - "skill:"
+    - "log:"
+    - "dimension:"
+    - "mechanism:"
+  # 2026-10-13 裁定 3：3 → 5（机制链需要更长的证据链；实测饱和点 = 5）
+  max_depth: 5
+  # 2026-10-13 裁定 3：20 → 12（收紧；旧上限下单起点最大 11，放行后最大 38，截断有留痕 _track_walk_stop）
+  max_paths: 12

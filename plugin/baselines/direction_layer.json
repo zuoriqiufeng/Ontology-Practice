@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "kind": "baseline",
+  "measured_at": "2026-10-10",
+  "source": "plugin/tests/test_direction_layer.py",
+  "remeasure": "python3 -m pytest plugin/tests/test_direction_layer.py -s -v 2>&1 | grep '§7'",
+  "case_set": { "error_cases": 15, "symptom_cases": 5 },
+  "env": { "python": "3.9.25", "qdrant_reachable": true },
+  "metrics": {
+    "top1_process_hit_rate": {
+      "value": 1.0, "hit": 15, "total": 15, "threshold": 0.9333, "direction": "gte",
+      "meaning": "错误码 → suspected_in 嫌疑进程 top-1 命中率（20 号对象轴）",
+      "test": "test_classification_top1_hit_rate"
+    },
+    "symptom_classification": {
+      "value": 1.0, "hit": 5, "total": 5, "threshold": 1.0, "direction": "gte",
+      "meaning": "5 个规范症状逐一命中标注嫌疑进程（assertIn 逐例）",
+      "test": "test_symptom_classification_hit_rate"
+    },
+    "skill_loading_accuracy": {
+      "value": 1.0, "hit": 15, "total": 15, "threshold": 0.95, "direction": "gte",
+      "meaning": "诊断路径推荐 Skill ⊇ 标注必需 Skill",
+      "test": "test_skill_loading_accuracy"
+    },
+    "source_order_accuracy": {
+      "value": 1.0, "hit": 26, "total": 26, "threshold": 0.9, "direction": "gte",
+      "meaning": "检索源顺序与标注一致（逐位置比对）",
+      "test": "test_source_order_accuracy"
+    },
+    "keyword_recall_template_baseline": {
+      "value": 0.1333, "hit": 2, "total": 15, "threshold": 0.0, "direction": "gt",
+      "meaning": "关键词召回（模板基线，BKN 锚点 + 进程属性）——21 号方案：完整定义靠库，本基线只覆盖 BKN 持有的词",
+      "note": "低值属设计如此（21 号后降级为防回归到零的留档基线），不要按覆盖率读它",
+      "test": "test_keyword_recall_template_baseline"
+    }
+  },
+  "regression_rule": "任一 direction=gte 的指标低于 threshold，或 gt 的指标降到 0 → 判为劣化（22 号 §5）"
+}

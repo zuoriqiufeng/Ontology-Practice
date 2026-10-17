@@ -1,0 +1,469 @@
+{
+ "schema": 1,
+ "label": "baseline",
+ "cases": 40,
+ "thresholds": {
+  "full_ratio_drop_pp": 5.0,
+  "partial_ratio_rise_pp": 5.0,
+  "out_chars_p90_rise_pct": 10.0
+ },
+ "env": {
+  "python": "3.9.25",
+  "qdrant_reachable": true,
+  "collection": "demo-product_collection",
+  "chunk_mode": "mini_first",
+  "defer_to_hermes": true
+ },
+ "summary": {
+  "total": 40,
+  "cases": 40,
+  "confidence": {
+   "full": 39,
+   "partial": 1,
+   "none": 0,
+   "EXC": 0,
+   "NO_CALL": 0
+  },
+  "full_ratio": 0.975,
+  "partial_ratio": 0.025,
+  "out_chars": {
+   "n": 40,
+   "p50": 686,
+   "p90": 4021,
+   "p99": 7274,
+   "max": 7274,
+   "total": 59571,
+   "percentiles_reliable": true
+  }
+ },
+ "records": [
+  {
+   "tool": "query_product",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 503,
+   "args": {
+    "aspect": "overview"
+   },
+   "out_chars": 540
+  },
+  {
+   "tool": "query_product",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 568,
+   "args": {
+    "aspect": "positioning"
+   },
+   "out_chars": 540
+  },
+  {
+   "tool": "query_product",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 637,
+   "args": {
+    "aspect": "advantages"
+   },
+   "out_chars": 671
+  },
+  {
+   "tool": "query_product",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 421,
+   "args": {
+    "aspect": "competitors"
+   },
+   "out_chars": 450
+  },
+  {
+   "tool": "query_product",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 3552,
+   "args": {
+    "aspect": "all"
+   },
+   "out_chars": 3454
+  },
+  {
+   "tool": "explain_architecture",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 1371,
+   "args": {
+    "topic": "full_sync"
+   },
+   "out_chars": 1253
+  },
+  {
+   "tool": "explain_architecture",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 1406,
+   "args": {
+    "topic": "incremental_sync"
+   },
+   "out_chars": 1288
+  },
+  {
+   "tool": "explain_architecture",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 1073,
+   "args": {
+    "topic": "topology"
+   },
+   "out_chars": 1088
+  },
+  {
+   "tool": "explain_architecture",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 428,
+   "args": {
+    "topic": "transaction"
+   },
+   "out_chars": 464
+  },
+  {
+   "tool": "explain_architecture",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 3052,
+   "args": {
+    "topic": "all"
+   },
+   "out_chars": 2832
+  },
+  {
+   "tool": "design_solution",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 3794,
+   "args": {
+    "source": "mysql",
+    "target": "oracle",
+    "scenario_hint": "migration"
+   },
+   "out_chars": 4021
+  },
+  {
+   "tool": "design_solution",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 3794,
+   "args": {
+    "source": "oracle",
+    "target": "mysql",
+    "scenario_hint": "auto"
+   },
+   "out_chars": 4021
+  },
+  {
+   "tool": "design_solution",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 3643,
+   "args": {
+    "source": "oracle",
+    "target": "gaussdb",
+    "scenario_hint": "dual_active"
+   },
+   "out_chars": 3802
+  },
+  {
+   "tool": "check_compatibility",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 2006,
+   "args": {
+    "source": "mysql",
+    "target": "oracle"
+   },
+   "out_chars": 1697
+  },
+  {
+   "tool": "check_compatibility",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 1997,
+   "args": {
+    "source": "oracle",
+    "target": "dm"
+   },
+   "out_chars": 1691
+  },
+  {
+   "tool": "list_scenarios",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 572,
+   "args": {
+    "keywords": []
+   },
+   "out_chars": 519
+  },
+  {
+   "tool": "list_scenarios",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 270,
+   "args": {
+    "keywords": [
+     "双活"
+    ]
+   },
+   "out_chars": 303
+  },
+  {
+   "tool": "list_scenarios",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 173,
+   "args": {
+    "keywords": [
+     "大数据"
+    ]
+   },
+   "out_chars": 206
+  },
+  {
+   "tool": "diagnose_error",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 238,
+   "args": {
+    "error_code": "-4073"
+   },
+   "out_chars": 340
+  },
+  {
+   "tool": "diagnose_error",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 240,
+   "args": {
+    "error_code": "-4002"
+   },
+   "out_chars": 342
+  },
+  {
+   "tool": "diagnose_error",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 280,
+   "args": {
+    "error_code": "ORA-01555"
+   },
+   "out_chars": 394
+  },
+  {
+   "tool": "diagnose_error",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 265,
+   "args": {
+    "error_code": "-4071"
+   },
+   "out_chars": 375
+  },
+  {
+   "tool": "diagnose_error",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 242,
+   "args": {
+    "error_code": "YAS-02276"
+   },
+   "out_chars": 344
+  },
+  {
+   "tool": "diagnose_error",
+   "confidence": "partial",
+   "gaps": [
+    "缺少关键字段: retrieval_guide"
+   ],
+   "result_chars": 63,
+   "args": {
+    "error_code": "ORA-99999"
+   },
+   "out_chars": 695
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 586,
+   "args": {
+    "operation": "activate_node"
+   },
+   "out_chars": 644
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 769,
+   "args": {
+    "operation": "register_db"
+   },
+   "out_chars": 818
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 860,
+   "args": {
+    "operation": "create_rule"
+   },
+   "out_chars": 911
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 713,
+   "args": {
+    "operation": "start_rule"
+   },
+   "out_chars": 771
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 625,
+   "args": {
+    "operation": "stop_rule"
+   },
+   "out_chars": 686
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 951,
+   "args": {
+    "operation": "delete_rule"
+   },
+   "out_chars": 1000
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 617,
+   "args": {
+    "operation": "compare_table"
+   },
+   "out_chars": 660
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 708,
+   "args": {
+    "operation": "failover"
+   },
+   "out_chars": 762
+  },
+  {
+   "tool": "resolve_relation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 471,
+   "args": {
+    "source_entity": "syncrule",
+    "relation_type": "all"
+   },
+   "out_chars": 485
+  },
+  {
+   "tool": "resolve_relation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 57,
+   "args": {
+    "source_entity": "error:-4073",
+    "relation_type": "suspected_in"
+   },
+   "out_chars": 106
+  },
+  {
+   "tool": "resolve_relation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 79,
+   "args": {
+    "source_entity": "dimension:consistency",
+    "relation_type": "observed_in"
+   },
+   "out_chars": 126
+  },
+  {
+   "tool": "resolve_relation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 141,
+   "args": {
+    "source_entity": "process:iahelper",
+    "relation_type": "supervises"
+   },
+   "out_chars": 182
+  },
+  {
+   "tool": "resolve_relation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 375,
+   "args": {
+    "source_entity": "syncrule",
+    "relation_type": "has_action"
+   },
+   "out_chars": 397
+  },
+  {
+   "tool": "resolve_operation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 6787,
+   "args": {
+    "operation": "start_rule"
+   },
+   "out_chars": 6671
+  },
+  {
+   "tool": "resolve_operation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 6871,
+   "args": {
+    "operation": "delete_rule"
+   },
+   "out_chars": 6748
+  },
+  {
+   "tool": "resolve_operation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 7370,
+   "args": {
+    "operation": "failover"
+   },
+   "out_chars": 7274
+  }
+ ],
+ "baseline_note": "**这是 C-20261010-01（白名单）与 C-20261010-02（BKN 零冗余清理）生效之前的状态**，保留为历史对照（22 号 §0.1-3「基线只增不改」）。**当前 yardstick 是 measure_confidence.v2.json**。\n本文件无 `case_id` → 逐用例对比会提示「旧格式基线」，需先补 case_id（可由 tool/args 重建）或改用 v2。",
+ "observed_deltas_v1_to_v2": {
+  "note": "两改动生效后对比 v1 的逐用例差异（隔离实验已归属来源）",
+  "query_product|{\"aspect\": \"all\"}": "-90（N-2 清理 −212 与 C-01 解截断 +122 的净值）",
+  "check_compatibility|{\"source\": \"oracle\", \"target\": \"dm\"}": "+106（全部来自 C-01）",
+  "explain_architecture|{\"topic\": \"all\"}": "+205（全部来自 C-01）",
+  "check_compatibility|{\"source\": \"mysql\", \"target\": \"oracle\"}": "+109（全部来自 C-01）",
+  "attribution_method": "隔离实验：临时树回退 N-2 的 17 个 bkn 文件（用 C-20261010-02/payload/.pre-apply/ 备份）后实测"
+ }
+}

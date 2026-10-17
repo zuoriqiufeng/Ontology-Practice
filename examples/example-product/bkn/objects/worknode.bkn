@@ -1,0 +1,27 @@
+---
+name: 工作节点
+id: worknode
+description: 承载同步任务的运行时节点（示例对象）
+aliases:
+  - 工作节点
+  - 节点
+  - 同步节点
+---
+
+# Object: Worknode (工作节点)
+
+> 示例对象：演示「对象 + 别名同址 + 值委托」。真实项目请换成你自己的对象。
+
+| 属性 | 语义 |
+|---|---|
+| 状态 | 节点的运行状态（取值由产品定义） |
+| 关联进程 | 该节点上运行的进程集合 |
+| 端口 | 由 `{db_manager_skill}` 提供（值委托：端口不进本体） |
+
+## 关系
+
+- `worknode` —`runs_on`→ `host`：节点运行在主机上（关系段写法见 `snippets/relation-runs-on.md`）
+
+## 约束
+
+- 运行态修改须先停止（约束类示例见 SCHEMA §3 的 `state_prerequisite`）。

@@ -1,0 +1,26 @@
+> 错误码**不进本体**（无上界：Demo Product 自身数百、各类型库合计上万，且会继续涨——见《BKN 设计哲学》
+> §0「本体原则」）。本体只给**有界的类与边**（进程 / 维度 / 症状 / 机制）；码只是**入口**。
+> `<码>` 在本文件里一律是占位符，**不在此登记任何码**。
+
+<!-- 同步动作（新遇到一类错误消息——**不建码清单、不改 .bkn**）:
+
+     ① 先问：这是**新的语义类别**，还是已有类别的**新说法**？
+        - 新说法（同一个"为什么"的另一种叫法）→ 在 plugin/error_semantics.yaml 的对应规则
+          `match` 里加**关键词**（**只加词，不加码**）
+        - 新类别 → 那是**本体的事**（dimension:* 是有界类集）：走本体评审（三问 + `SCHEMA.md` 的有界性口径）
+
+     ② 含义与处置经验 → Qdrant 模式库 `store:log_patterns_collection`
+        （条目含 symptom / root_cause / remediation / log_fingerprint / false_positive）
+
+     ③ 现场口语 → 规范码的归一 → plugin/constants.py::ERROR_ALIASES（值数据层）
+        机械变体（4073 / 错误4073 / ORA1555 之类）由 resolver._error_code_variants 派生，**不登记**
+
+     ④ 机制（为什么会这样、怎么连锁、先查什么）→ 机制层（进本体的 HOW 轴）
+
+     ⑤ 校验：
+        - `python3 scripts/code_id_coverage.py --check` → 语义规则的**有界完备性**
+          （每个维度都有规则；规则内不得出现码形态）
+        - lint `_check_no_error_nodes` → 内容文件里出现 `error:` 节点即 error
+
+     仍未归类的现场表现：由 gap_log 自动记录，`plugin/scripts/scan_gaps.py` 聚合成**缺口簇**
+     （按 频次 × 影响面，附建议归属），按簇分派——不靠人为枚举。 -->

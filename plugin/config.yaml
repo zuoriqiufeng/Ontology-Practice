@@ -1,0 +1,92 @@
+# demo-product-bkn Plugin 配置文件
+# 向量检索、Embedding 模型、BKN 路径配置
+
+qdrant:
+  host: localhost
+  port: 6333
+  collection: demo-product_collection    # 主检索集合
+  timeout: 5                         # 请求超时(秒)
+  # ---- 多集合注册表 (v1.7) ----
+  collections:                        # BM25 索引按此注册表逐集合构建；reload --with-bm25 默认重置全部
+    - name: demo-product_collection
+      description: 文档 chunk 主检索集合（默认）
+    - name: test_doc_chunks
+      description: 配置手册辅助集合
+    - name: log_patterns_collection
+      description: 日志模式库（日志特征→根因→处置）
+    - name: demo-product_private_collection
+      description: 私有文档集合（内部文档，建议 chunk_mode='auto' 除非分块带 chunk_level 字段）
+
+bkn:
+  root: ./bkn                       # BKN 文件根目录 (相对 plugin 目录或绝对路径)
+
+# 可选: 按需启用/禁用 Tool (默认全部启用, 注释掉某 Tool 即禁用)
+tools:
+  enabled: []                         # 空 = 全部启用; ["query_product","check_compatibility"] = 仅启用指定
+  # ---- 豁免 _wrap() 的 Tool 输出总量预算 (v3.9) ----
+  # 独立于 search.output_max_chars: 后者语义是「检索类输出预算」且 raw 模式会跳过。
+  # search_qdrant / diagnose_db_link / check_action_risk 绕过 _wrap()，用这个键。
+  output_max_chars: 0                 # 0=无限制(默认); >0 时按优先级截断到该字符数
+
+embedding:
+  # 本地模式: 使用 sentence-transformers
+  mode: local                        # local | api
+  model_name: BAAI/bge-large-zh-v1.5  # 本地模型名 (HF Hub 或本地路径)
+  dimension: 1024                   # 模型输出向量维度，必须与 Qdrant collection 一致
+  device: cpu                        # cpu | cuda
+  hf_offline: true                   # 离线模式 (已下载模型)
+  hf_home: <data>/public/chunk/HuggingFace  # HF_HOME 本地缓存目录
+  
+  # API 模式 (mode=api 时生效, 暂未启用)
+  api_url: http://localhost:8080/embed
+  api_key: ""
+  api_batch_size: 32
+
+search:
+  top_k: 5                           # 默认返回条数
+  score_threshold: 0.3               # 最低相似度阈值
+  hybrid: true                       # BM25 + BGE RRF 混合搜索
+  fallback_on_bkn_none: true         # BKN confidence=none 时自动回退 Qdrant
+  fallback_on_bkn_partial: true      # BKN confidence=partial 时也回退 Qdrant
+  partial_enrich: true               # 合并模式: partial 时保留 BKN 骨架 + Qdrant 血肉 (false=替换)
+  min_content_length: 50             # 返回内容最短门槛(字符), 低于此值视为 partial
+  min_risk_count: 3                  # 风险最少条数, 低于此值触发 Qdrant 补充（21 号 2B: 5→3，BKN 单场景 risks_of 实测上限 3，阈值 5 = design_solution 永久 partial）
+  # ---- 查询分解 (v2.0) - 仅 defer_to_hermes=false 时生效 ----
+  decompose: true                    # 启用多维度查询分解
+  decompose_top_k: 5                 # 每个子查询返回条数 (总召回 = 子查询数 × top_k)
+  decompose_min_queries: 3           # 最少分解出几个子查询
+  decompose_max_queries: 8           # 最多分解出几个子查询
+  decompose_dedup_threshold: 0.85    # 内容去重阈值 (前N字符相同视为重复)
+  # ---- Hermes 原生分解 (v3.0) ----
+  defer_to_hermes: true              # true=执行内部 Qdrant 兜底，并额外返回 `_search_deferred`/`_instruction` 让 Agent 自主调用 search_qdrant
+  # ---- BGE miss → BM25 fallback (v3.3) ----
+  bm25_fallback_score: 0.1           # 所有dense hit score低于此值时走BM25-only兜底 (0.1=仅兜底BGE完全失败)
+  # ---- BGE precision guard (v3.4) ----
+  bm25_precision_guard: true         # 查询含精确项(负号4位数字/ORA错误码)且BGE结果未命中时，走精确索引+BM25兜底
+  # ---- Chunk-aware search (v3.6) ----
+  chunk_mode: "mini_first"           # auto | mini_first | parent_expand | standard_image | large_only
+  mini_first_top_k_multiplier: 2     # mini-first 阶段取 top_k * N
+  parent_expand_limit_multiplier: 2  # parent_expand 拉取 large 时的 limit 倍数
+  # ---- Tool 输出总量预算 (v1.5) ----
+  output_max_chars: 0                # 0=无限制(默认); >0 时 Tool 输出按优先级截断到该字符数
+
+# ---- RiskGuard (v1.5, P0-4) ----
+risk_guard:
+  enabled: true        # 总开关；false 时 hook 直接放行
+  block: true          # false=只记录日志不阻断（灰度模式）；true=返回 block 消息阻断调用（阶段B: 仅拦 critical+error_code非空）
+
+# ---- 日志轮转 (v1.7 大小轮转; 2026-09-30 起日期+大小双维) ----
+# 文件名含日期: usage_log_YYYY-MM-DD.jsonl（跨日自动开新文件）；
+# 同日超 max_bytes 轮转分片 .1/.2/.3（最旧删除）；历史旧命名由分析脚本兼容读取。
+log_rotate:
+  dir: logs                  # 日志输出目录 (2A)：相对值锚定仓库根（plugin 的上级）；绝对路径或 ~ 开头则直接使用；env LOG_DIR 可覆盖
+  gap_max_bytes: 524288      # gap_log_YYYY-MM-DD.jsonl 同日超过 512KB 轮转
+  usage_max_bytes: 262144    # usage_log_YYYY-MM-DD.jsonl 同日超过 256KB 轮转
+  traj_max_bytes: 262144     # trajectories/trajectory_YYYY-MM-DD.jsonl（批 U-1 任务级轨迹）同日超过 256KB 轮转；env LOG_ROTATE_TRAJ_MAX_BYTES
+  backups: 3                 # 同日保留 3 个历史分片 (.1/.2/.3)，最旧删除
+  retention_days: 0          # 日文件保留天数: 0=永久保留；N=自动清理早于 N 天的日文件及其分片
+
+# 诊断关键词生成器（批 6-4）：可选；未配置 endpoint 时 generate_query_task 直接走模板兜底
+llm:
+  diagnostic_keyword_endpoint: ""   # 模型端点（如 http://localhost:8000/generate）；留空 = 模板兜底
+  diagnostic_keyword_timeout: 15

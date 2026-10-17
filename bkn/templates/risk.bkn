@@ -1,0 +1,13 @@
+<!-- type: risk -->
+
+<!-- 新增一个**动作级约束**（登记表只含边绑定的动作级约束）——两步：
+
+① 追加到 bkn/risks/constraints.bkn 对应级别表格（L0 / L2 HIGH / L2 MEDIUM）的一行（4 列，无「关联」列）：
+
+| [风险中文名] | [约束ID_snake_case] | [类型: threshold/state_prerequisite/param_constraint/forbidden_sequence/resource_limit/compatibility/data_loss/performance] | [约束内容：自然语言，禁止/必须 ...] |
+
+② 在 bkn/relations/action_routing.bkn 的 constrained_by 段补一条映射边
+   （**表 = 边绑定的 ID 属性登记；不补边 → lint 警告且 risk_guard 不装配**）:
+  - `[action_capability]` → `[约束ID]`  # [注释]
+
+⚠️ 无动作可绑的全局/对象级约束 → 放「全局约束」KV 段（不在登记表），不必补边。 -->

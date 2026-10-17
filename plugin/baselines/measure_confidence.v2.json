@@ -1,0 +1,505 @@
+{
+ "schema": 1,
+ "label": "baseline-v2",
+ "cases": 40,
+ "thresholds": {
+  "full_ratio_drop_pp": 5.0,
+  "partial_ratio_rise_pp": 5.0,
+  "out_chars_p90_rise_pct": 10.0,
+  "per_case_decrease_pct": 10.0,
+  "per_case_increase_pct": 25.0
+ },
+ "env": {
+  "python": "3.9.25",
+  "qdrant_reachable": true,
+  "collection": "demo-product_collection",
+  "chunk_mode": "mini_first",
+  "defer_to_hermes": true
+ },
+ "summary": {
+  "total": 40,
+  "cases": 40,
+  "confidence": {
+   "full": 39,
+   "partial": 1,
+   "none": 0,
+   "EXC": 0,
+   "NO_CALL": 0
+  },
+  "full_ratio": 0.975,
+  "partial_ratio": 0.025,
+  "out_chars": {
+   "n": 40,
+   "p50": 686,
+   "p90": 4021,
+   "p99": 7274,
+   "max": 7274,
+   "total": 59901,
+   "percentiles_reliable": true
+  }
+ },
+ "records": [
+  {
+   "tool": "query_product",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 503,
+   "args": {
+    "aspect": "overview"
+   },
+   "case_id": "query_product|{\"aspect\": \"overview\"}",
+   "out_chars": 540
+  },
+  {
+   "tool": "query_product",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 568,
+   "args": {
+    "aspect": "positioning"
+   },
+   "case_id": "query_product|{\"aspect\": \"positioning\"}",
+   "out_chars": 540
+  },
+  {
+   "tool": "query_product",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 637,
+   "args": {
+    "aspect": "advantages"
+   },
+   "case_id": "query_product|{\"aspect\": \"advantages\"}",
+   "out_chars": 671
+  },
+  {
+   "tool": "query_product",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 421,
+   "args": {
+    "aspect": "competitors"
+   },
+   "case_id": "query_product|{\"aspect\": \"competitors\"}",
+   "out_chars": 450
+  },
+  {
+   "tool": "query_product",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 3462,
+   "args": {
+    "aspect": "all"
+   },
+   "case_id": "query_product|{\"aspect\": \"all\"}",
+   "out_chars": 3364
+  },
+  {
+   "tool": "explain_architecture",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 1371,
+   "args": {
+    "topic": "full_sync"
+   },
+   "case_id": "explain_architecture|{\"topic\": \"full_sync\"}",
+   "out_chars": 1253
+  },
+  {
+   "tool": "explain_architecture",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 1406,
+   "args": {
+    "topic": "incremental_sync"
+   },
+   "case_id": "explain_architecture|{\"topic\": \"incremental_sync\"}",
+   "out_chars": 1288
+  },
+  {
+   "tool": "explain_architecture",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 1073,
+   "args": {
+    "topic": "topology"
+   },
+   "case_id": "explain_architecture|{\"topic\": \"topology\"}",
+   "out_chars": 1088
+  },
+  {
+   "tool": "explain_architecture",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 428,
+   "args": {
+    "topic": "transaction"
+   },
+   "case_id": "explain_architecture|{\"topic\": \"transaction\"}",
+   "out_chars": 464
+  },
+  {
+   "tool": "explain_architecture",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 3052,
+   "args": {
+    "topic": "all"
+   },
+   "case_id": "explain_architecture|{\"topic\": \"all\"}",
+   "out_chars": 3037
+  },
+  {
+   "tool": "design_solution",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 3794,
+   "args": {
+    "source": "mysql",
+    "target": "oracle",
+    "scenario_hint": "migration"
+   },
+   "case_id": "design_solution|{\"scenario_hint\": \"migration\", \"source\": \"mysql\", \"target\": \"oracle\"}",
+   "out_chars": 4021
+  },
+  {
+   "tool": "design_solution",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 3794,
+   "args": {
+    "source": "oracle",
+    "target": "mysql",
+    "scenario_hint": "auto"
+   },
+   "case_id": "design_solution|{\"scenario_hint\": \"auto\", \"source\": \"oracle\", \"target\": \"mysql\"}",
+   "out_chars": 4021
+  },
+  {
+   "tool": "design_solution",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 3643,
+   "args": {
+    "source": "oracle",
+    "target": "gaussdb",
+    "scenario_hint": "dual_active"
+   },
+   "case_id": "design_solution|{\"scenario_hint\": \"dual_active\", \"source\": \"oracle\", \"target\": \"gaussdb\"}",
+   "out_chars": 3802
+  },
+  {
+   "tool": "check_compatibility",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 2006,
+   "args": {
+    "source": "mysql",
+    "target": "oracle"
+   },
+   "case_id": "check_compatibility|{\"source\": \"mysql\", \"target\": \"oracle\"}",
+   "out_chars": 1806
+  },
+  {
+   "tool": "check_compatibility",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 1997,
+   "args": {
+    "source": "oracle",
+    "target": "dm"
+   },
+   "case_id": "check_compatibility|{\"source\": \"oracle\", \"target\": \"dm\"}",
+   "out_chars": 1797
+  },
+  {
+   "tool": "list_scenarios",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 572,
+   "args": {
+    "keywords": []
+   },
+   "case_id": "list_scenarios|{\"keywords\": []}",
+   "out_chars": 519
+  },
+  {
+   "tool": "list_scenarios",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 270,
+   "args": {
+    "keywords": [
+     "双活"
+    ]
+   },
+   "case_id": "list_scenarios|{\"keywords\": [\"双活\"]}",
+   "out_chars": 303
+  },
+  {
+   "tool": "list_scenarios",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 173,
+   "args": {
+    "keywords": [
+     "大数据"
+    ]
+   },
+   "case_id": "list_scenarios|{\"keywords\": [\"大数据\"]}",
+   "out_chars": 206
+  },
+  {
+   "tool": "diagnose_error",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 238,
+   "args": {
+    "error_code": "-4073"
+   },
+   "case_id": "diagnose_error|{\"error_code\": \"-4073\"}",
+   "out_chars": 340
+  },
+  {
+   "tool": "diagnose_error",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 240,
+   "args": {
+    "error_code": "-4002"
+   },
+   "case_id": "diagnose_error|{\"error_code\": \"-4002\"}",
+   "out_chars": 342
+  },
+  {
+   "tool": "diagnose_error",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 280,
+   "args": {
+    "error_code": "ORA-01555"
+   },
+   "case_id": "diagnose_error|{\"error_code\": \"ORA-01555\"}",
+   "out_chars": 394
+  },
+  {
+   "tool": "diagnose_error",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 265,
+   "args": {
+    "error_code": "-4071"
+   },
+   "case_id": "diagnose_error|{\"error_code\": \"-4071\"}",
+   "out_chars": 375
+  },
+  {
+   "tool": "diagnose_error",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 242,
+   "args": {
+    "error_code": "YAS-02276"
+   },
+   "case_id": "diagnose_error|{\"error_code\": \"YAS-02276\"}",
+   "out_chars": 344
+  },
+  {
+   "tool": "diagnose_error",
+   "confidence": "partial",
+   "gaps": [
+    "缺少关键字段: retrieval_guide"
+   ],
+   "result_chars": 63,
+   "args": {
+    "error_code": "ORA-99999"
+   },
+   "case_id": "diagnose_error|{\"error_code\": \"ORA-99999\"}",
+   "out_chars": 695
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 586,
+   "args": {
+    "operation": "activate_node"
+   },
+   "case_id": "get_prerequisites|{\"operation\": \"activate_node\"}",
+   "out_chars": 644
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 769,
+   "args": {
+    "operation": "register_db"
+   },
+   "case_id": "get_prerequisites|{\"operation\": \"register_db\"}",
+   "out_chars": 818
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 860,
+   "args": {
+    "operation": "create_rule"
+   },
+   "case_id": "get_prerequisites|{\"operation\": \"create_rule\"}",
+   "out_chars": 911
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 713,
+   "args": {
+    "operation": "start_rule"
+   },
+   "case_id": "get_prerequisites|{\"operation\": \"start_rule\"}",
+   "out_chars": 771
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 625,
+   "args": {
+    "operation": "stop_rule"
+   },
+   "case_id": "get_prerequisites|{\"operation\": \"stop_rule\"}",
+   "out_chars": 686
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 951,
+   "args": {
+    "operation": "delete_rule"
+   },
+   "case_id": "get_prerequisites|{\"operation\": \"delete_rule\"}",
+   "out_chars": 1000
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 617,
+   "args": {
+    "operation": "compare_table"
+   },
+   "case_id": "get_prerequisites|{\"operation\": \"compare_table\"}",
+   "out_chars": 660
+  },
+  {
+   "tool": "get_prerequisites",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 708,
+   "args": {
+    "operation": "failover"
+   },
+   "case_id": "get_prerequisites|{\"operation\": \"failover\"}",
+   "out_chars": 762
+  },
+  {
+   "tool": "resolve_relation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 471,
+   "args": {
+    "source_entity": "syncrule",
+    "relation_type": "all"
+   },
+   "case_id": "resolve_relation|{\"relation_type\": \"all\", \"source_entity\": \"syncrule\"}",
+   "out_chars": 485
+  },
+  {
+   "tool": "resolve_relation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 57,
+   "args": {
+    "source_entity": "error:-4073",
+    "relation_type": "suspected_in"
+   },
+   "case_id": "resolve_relation|{\"relation_type\": \"suspected_in\", \"source_entity\": \"error:-4073\"}",
+   "out_chars": 106
+  },
+  {
+   "tool": "resolve_relation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 79,
+   "args": {
+    "source_entity": "dimension:consistency",
+    "relation_type": "observed_in"
+   },
+   "case_id": "resolve_relation|{\"relation_type\": \"observed_in\", \"source_entity\": \"dimension:consistency\"}",
+   "out_chars": 126
+  },
+  {
+   "tool": "resolve_relation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 141,
+   "args": {
+    "source_entity": "process:iahelper",
+    "relation_type": "supervises"
+   },
+   "case_id": "resolve_relation|{\"relation_type\": \"supervises\", \"source_entity\": \"process:iahelper\"}",
+   "out_chars": 182
+  },
+  {
+   "tool": "resolve_relation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 375,
+   "args": {
+    "source_entity": "syncrule",
+    "relation_type": "has_action"
+   },
+   "case_id": "resolve_relation|{\"relation_type\": \"has_action\", \"source_entity\": \"syncrule\"}",
+   "out_chars": 397
+  },
+  {
+   "tool": "resolve_operation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 6787,
+   "args": {
+    "operation": "start_rule"
+   },
+   "case_id": "resolve_operation|{\"operation\": \"start_rule\"}",
+   "out_chars": 6671
+  },
+  {
+   "tool": "resolve_operation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 6871,
+   "args": {
+    "operation": "delete_rule"
+   },
+   "case_id": "resolve_operation|{\"operation\": \"delete_rule\"}",
+   "out_chars": 6748
+  },
+  {
+   "tool": "resolve_operation",
+   "confidence": "full",
+   "gaps": [],
+   "result_chars": 7370,
+   "args": {
+    "operation": "failover"
+   },
+   "case_id": "resolve_operation|{\"operation\": \"failover\"}",
+   "out_chars": 7274
+  }
+ ],
+ "supersedes": "measure_confidence.json",
+ "supersede_reason": "v1 的记录没有 `case_id`（稳定用例标识），新加的**逐用例 out_chars 对比**无法工作——门禁会提示「旧格式基线，建议重出」。按 22 号 §0.1-3「基线只增不改」，另立 v2 而非覆盖 v1：v1 保留为 **C-20261010-01 生效前**的对照（该候选让 2 个用例各 +111/+205 字符，增长已获用户批准，故 v2 把它计入基线）。",
+ "baseline_note": "本基线含 C-20261010-01（ContextLoader 白名单 4 个 key）生效后的输出体量。逐用例对比可用于发现「少数用例的体量变化」——这是 p90 看不见的（见 thresholds 内注释）。\n\n**C-20261010-01 的真实影响面是 4 个用例**（我先前只探了 2 个）：check_compatibility(mysql→oracle) +6.4%、check_compatibility(oracle→dm) +6.3%、explain_architecture(all) +7.2%，以及 query_product(aspect=all) 净 −2.6%（N-2 清理 −212 与 C-01 +122 的净值）。**前三例的 +6~7% 都低于 p90 阈值、且完全不移动 p90**——这正是新增「逐用例对比」要抓的东西。"
+}

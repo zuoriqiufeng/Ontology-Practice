@@ -1,0 +1,12 @@
+# skill_manifest.yaml — 语义 ID → 实现 的**单点映射**
+#
+# 本体（.bkn）只写语义指针（skill:<id>），实现路径与能力语义在此维护。
+# 双向引用完整性由 lint 校验：正向防悬空、反向防孤儿。
+#
+# skills:
+#   - id: skill:my-product-db-manager
+#     entry: "skill/my-product-db-manager"
+#     capability: database_instance_management
+#     load_criterion: 需要库实例的端口/字符集/日志配置等取值时
+
+skills: []

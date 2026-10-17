@@ -1,0 +1,48 @@
+{
+ "schema": 1,
+ "ruled_at": "2026-10-13",
+ "ruling": "用户 2026-10-13 裁定「1 B」：M-5 回放纳入 gate.sh，取「不许更差」floor；同日「2 按照你的思路」⇒ 裁 1b 重新定基到 Q27 后的契约；再同日「1c 按照你的建议」⇒ 机制级指标改为**带观测**用例（裁 1c）",
+ "measured_at": "2026-10-13",
+ "source": "python3 scripts/m5_case_replay.py（现网实跑，重定基后）",
+ "floors": {
+  "mechanism": 4,
+  "routing": 2,
+  "honest_unknown": 4
+ },
+ "totals": {
+  "mechanism": 4,
+  "routing": 2,
+  "honest_unknown": 6
+ },
+ "rejudged": {
+  "at": "2026-10-13",
+  "ruling": "用户 2026-10-13 裁定「另立候选重判 floor」（裁 3）",
+  "what": "totals.mechanism 3 → 4，并把现状记入 doc/optimize/43-remaining-work.md §21.4",
+  "why": "position_regression 已由 C-20261013-10 落盘 ⇒ MECH_CASES 的 CASE-0007 解除 requires_class、进入分母；实测 4/4",
+  "effect": "floors 三个值均不变（3 / 2 / 4）——机制级在裁 1c 已重判为**带观测**用例，本次只补现状记录，不构成新的阈值变更"
+ },
+ "metric_defs": {
+  "mechanism": "**带观测时**候选集是否含真因机制（29 号 §6 第一优先判据）——用例见 m5_case_replay.py 的 MECH_CASES（观测逐字取自库内 bug-analysis）；带 requires_class 的用例在其类未落盘时**不计入分母**",
+  "routing": "有明确预期（expect 非空）的入口是否路由到预期进程/维度（hit/有预期的条数）——**重定基后**只保留症状入口",
+  "honest_unknown": "**Q27 形态的诚实兜底**：返回 `dimension:unknown` **且** `needs` 非空（＝明说不知道并要求消息文本/日志来源）（hit/总条数）"
+ },
+ "superseded_metric_defs": {
+  "at": "2026-10-11（29 号 M-5 基线；Q27 之前）",
+  "routing": "凡有明确预期的入口都路由到正确进程（含**只给码**的 D1/D1-dash）⇒ 4/4",
+  "honest_unknown": "**未登记即诚实**（脚本的 `unknown = not registered`）⇒ 2/6（只有 -4021/-4050）",
+  "why_not_comparable": "Q27 裁定「码不是查表维度」之后，「只给码」时系统**不应**路由（正确行为是明说不知道）⇒ 旧 4/4 与旧 2/6 都是**旧契约**下的读数，与今日不可比。留档仅为溯源。"
+ },
+ "caveats": [
+  "**routing 2/2（重定基）不是退步**：旧 4/4 含两条「只给码」的命中，而 Q27 后那两条的正确行为是明说不知道 ⇒ 它们的预期由 expect=process:iatrack 改为 None（不进路由分母）。",
+  "**honest_unknown 4/6（重定基）**：-4021 / -4050 / 4073 / -4073 四例都返回 dimension:unknown ＋ needs ⇒ 诚实兜底恢复判别力（旧定义只数「未登记」，Q27 后恒为 0）。",
+  "**机制级已可判别（裁 1c）**：由 mechanism_metric() 计算——旧口径只给码 ⇒ 本体无收窄 ⇒ 召回恒 100%、无判别力；改用**带观测**用例后语义变为「**有观测时**是否收敛到真因机制」，现为 3/3。CASE-0007（期望 position_regression）在 C-20261013-10 落盘前**不计入分母**（单列 pending）——落盘后分母变 4，floor 仍按**命中数**判（不许更差）。",
+  "**要改 floor 必须先裁定**：floor 是裁定产物，脚本只做比较（见 m5_case_replay.py --check）。"
+ ],
+ "rejudged2": {
+  "at": "2026-10-13",
+  "ruling": "用户 2026-10-13 裁定「B」：把 mechanism floor 3 → 4，其余不变",
+  "what": "floors.mechanism 3 → 4（routing 2 / honest_unknown 4 不变）",
+  "why": "实测已是 mechanism 4/4（CASE-0007 随 position_regression 立类进入分母）⇒ 提到 4 不会立刻红",
+  "effect": "把「机制级不许从 4 退回去」钉成卡；本轮唯一变严且安全的选项"
+ }
+}

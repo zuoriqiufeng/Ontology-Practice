@@ -1,0 +1,16 @@
+<!-- type: action -->
+## Action: [动作名称]
+
+- capability: [动作ID_snake_case]
+- object: [归属对象ID]
+- access_type: [read/write/admin]
+- implements: skill:[Skill名称]
+- params: [参数语义描述，具体字段由 Skill 定义]
+- constraints: [约束说明，对应 constraints.bkn 约束ID]
+- risks: [关联风险/错误码]
+- notes: [备注]
+- aliases: [别名1], [别名2]
+- description: [动作描述]
+
+<!-- 若为危险操作，补充: -->
+<!-- - dangerous: true -->

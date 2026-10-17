@@ -1,0 +1,224 @@
+# plugin/provenance.yaml
+# 来源侧车（24 号 D4 / 22 号批 2-4；落层经 Q2 裁定为 Tool 层）
+#
+# **为什么需要**：本体的断言里有最需可查的一档——**约束**（02 号 §7：约束写错则护栏直接失效或
+# 误伤，而诊断方向写错只是「思路偏了」可恢复）。此前没有任何来源记录，审计与演化都无据。
+#
+# **为什么不写进 .bkn**（关键）：26 号「零元信息」明令本体层不含来源/批次/演进注记；
+# 且 2026-10-10 的用户裁定「BKN 零冗余」把这条从规则升级为**机检**（`_check_no_meta_info`）。
+# 故来源一律落本文件（Tool 层值数据，与 constants.py / skill_manifest.yaml / field_semantics.yaml 同层）。
+#
+# **一致性由 lint 强制**（不变量 I5）：`bkn/risks/constraints.bkn` 的每个 constraint ID
+# 必须在此有条目；缺条目 = error（见 lint_bkn.py::_check_provenance_coverage）。
+#
+# 依据: doc/optimize/24-ontology-build-sources.md §3 D4；22 号 §3 批 2-4；29 号 §4.3 同层先例
+schema: 1
+measured_at: 2026-10-10
+
+strength_legend:
+  strong: "可复现（测试断言 / 日志实录 / 代码事实）"
+  medium: "厂商文档 / 现场口述——须两源交叉方可进本体"
+  medium+: "单源但可复现验证（能写成测试用例）——视同强档"
+  weak: "推测 / 单点——只作线索，不进本体"
+  unknown: "尚无来源记录——**本批的起点**；逐批补齐，覆盖率本身就是度量"
+
+source_types:
+  S1: "产品文档（白皮书 / 手册 / 配置指南）"
+  S2: "运行时日志（现场实录）"
+  S3: "Skill references 反向抽取"
+  S4: "测试用例与故障注入"
+  S5: "现场问答与缺口（gap_log）"
+  S6: "交付 / 工单记录（只存编号，正文不入库）"
+  S7: "产品自身代码 / 配置 / SQL"
+
+# scope：本侧车覆盖「约束 + 状态机公理」这一档（24 号 D4 的原始范围）。
+# 24 号 §2 的七类数据源（S1–S7）与 D1 分级在此落地为每条记录的 sources。
+scope:
+  covers: ["constraint:*", "state_machine:*"]
+  excludes:
+    - "term/relation/mapping 等其它本体对象——待 24 号批 B-4 后按缺口优先级扩展"
+
+entries:
+  - target: "constraint:cannot_modify_not_STOPPED"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_risk_guard.py", strength: strong}
+    note: "测试断言的是**代码行为与约束一致**（可复现）；产品行为层面的确认仍需现场证据（见 needs）"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:must_dry_run_before_delete"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_risk_guard.py", strength: strong}
+    note: "测试断言的是**代码行为与约束一致**（可复现）；产品行为层面的确认仍需现场证据（见 needs）"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:must_dry_run_first"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_risk_guard.py", strength: strong}
+    note: "测试断言的是**代码行为与约束一致**（可复现）；产品行为层面的确认仍需现场证据（见 needs）"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:cannot_delete_RUNNING"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_lint_bkn.py", strength: strong}
+      - {type: S4, ref: "plugin/tests/test_risk_guard.py", strength: strong}
+    note: "测试断言的是**代码行为与约束一致**（可复现）；产品行为层面的确认仍需现场证据（见 needs）"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:cannot_restart_ABNORMAL"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_risk_guard.py", strength: strong}
+    note: "测试断言的是**代码行为与约束一致**（可复现）；产品行为层面的确认仍需现场证据（见 needs）"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:must_use_stop_parse_yes"
+    sources: []
+    strength: unknown
+    needs: "无任何独立证据——须从现场日志 / 业务确认 / 产品代码中取证；**在取证前，该约束的语义正确性未被验证**"
+    checked_at: "2026-10-10"
+  - target: "constraint:rule_must_be_STOPPED"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_relations.py", strength: strong}
+      - {type: S4, ref: "plugin/tests/test_risk_guard.py", strength: strong}
+    note: "测试断言的是**代码行为与约束一致**（可复现）；产品行为层面的确认仍需现场证据（见 needs）"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:cannot_restart_RUNNING"
+    sources:
+      - {type: S1, ref: "doc/build/demo-product-bkn/31-tools.md", strength: medium}
+    note: "文档引用属「中」档——须两源交叉；该文档为历史基准（20 号），宜补现行来源"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:cannot_stop_FULLSYNC"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_lint_bkn.py", strength: strong}
+      - {type: S4, ref: "plugin/tests/test_risk_guard.py", strength: strong}
+    note: "测试断言的是**代码行为与约束一致**（可复现）；产品行为层面的确认仍需现场证据（见 needs）"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:must_confirm_connectivity_check"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_risk_guard.py", strength: strong}
+    note: "测试断言的是**代码行为与约束一致**（可复现）；产品行为层面的确认仍需现场证据（见 needs）"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:both_nodes_NORMAL"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_risk_guard.py", strength: strong}
+    note: "测试断言的是**代码行为与约束一致**（可复现）；产品行为层面的确认仍需现场证据（见 needs）"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:no_full_compare_peak_hours"
+    sources:
+      - {type: S1, ref: "doc/build/demo-product-bkn/20-bkn_data_model.md", strength: medium}
+    note: "文档引用属「中」档——须两源交叉；该文档为历史基准（20 号），宜补现行来源"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:worknode_must_be_ONLINE"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_risk_guard.py", strength: strong}
+    note: "测试断言的是**代码行为与约束一致**（可复现）；产品行为层面的确认仍需现场证据（见 needs）"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:node_must_be_INACTIVE"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_risk_guard.py（状态解析与 forbidden_states 派生断言）", strength: strong}
+      - {type: S7, ref: "bkn/objects/worknode.bkn「关键属性 status: 未激活 / 在线 / 离线」与「状态机」段", strength: strong}
+    note: "语义来源＝本体自身已声明的状态取值域与状态链（C-20261012-13 起状态名规范化，此前因中文名不合解析契约而读不出）；论证见 doc/optimize/39 号 §2 关二（≥6 个独立来源，其中 3 个来自本体自身）"
+    needs: "补一条现场证据（控制台重复激活的实际提示 / 日志）以确认拦截行为与现场一致"
+    checked_at: "2026-10-12"
+  - target: "constraint:force_allowed_for_OFFLINE_node"
+    sources: []
+    strength: unknown
+    needs: "无任何独立证据——须从现场日志 / 业务确认 / 产品代码中取证；**在取证前，该约束的语义正确性未被验证**"
+    checked_at: "2026-10-10"
+  - target: "constraint:must_confirm_reset_reason"
+    sources: []
+    strength: unknown
+    needs: "无任何独立证据——须从现场日志 / 业务确认 / 产品代码中取证；**在取证前，该约束的语义正确性未被验证**"
+    checked_at: "2026-10-10"
+  - target: "constraint:must_backup_before_write"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_relations.py", strength: strong}
+    note: "测试断言的是**代码行为与约束一致**（可复现）；产品行为层面的确认仍需现场证据（见 needs）"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:must_confirm_target_SCN"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_relations.py", strength: strong}
+    note: "测试断言的是**代码行为与约束一致**（可复现）；产品行为层面的确认仍需现场证据（见 needs）"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:must_backup_target_table"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_relations.py", strength: strong}
+    note: "测试断言的是**代码行为与约束一致**（可复现）；产品行为层面的确认仍需现场证据（见 needs）"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:must_backup_before_etcd_import"
+    sources: []
+    strength: unknown
+    needs: "无任何独立证据——须从现场日志 / 业务确认 / 产品代码中取证；**在取证前，该约束的语义正确性未被验证**"
+    checked_at: "2026-10-10"
+  - target: "constraint:must_full_verify_before_failover"
+    sources: []
+    strength: unknown
+    needs: "无任何独立证据——须从现场日志 / 业务确认 / 产品代码中取证；**在取证前，该约束的语义正确性未被验证**"
+    checked_at: "2026-10-10"
+  - target: "constraint:related_rules_must_be_STOPPED"
+    sources: []
+    strength: unknown
+    needs: "无任何独立证据——须从现场日志 / 业务确认 / 产品代码中取证；**在取证前，该约束的语义正确性未被验证**"
+    checked_at: "2026-10-10"
+  - target: "constraint:cannot_delete_referenced_node"
+    sources: []
+    strength: unknown
+    needs: "无任何独立证据——须从现场日志 / 业务确认 / 产品代码中取证；**在取证前，该约束的语义正确性未被验证**"
+    checked_at: "2026-10-10"
+  - target: "constraint:prefer_ipv4_on_multi_ip"
+    sources:
+      - {type: S1, ref: "doc/build/demo-product-bkn/20-bkn_data_model.md", strength: medium}
+    note: "文档引用属「中」档——须两源交叉；该文档为历史基准（20 号），宜补现行来源"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:rule_name_case_sensitive_single_query"
+    sources:
+      - {type: S1, ref: "doc/build/demo-product-bkn/20-bkn_data_model.md", strength: medium}
+    note: "文档引用属「中」档——须两源交叉；该文档为历史基准（20 号），宜补现行来源"
+    needs: "补一条现场证据（日志实录 / 业务确认）以升级强度"
+    checked_at: "2026-10-10"
+  - target: "constraint:must_confirm_alarm_before_delete"
+    sources: []
+    strength: unknown
+    needs: "无任何独立证据——须从现场日志 / 业务确认 / 产品代码中取证；**在取证前，该约束的语义正确性未被验证**"
+    checked_at: "2026-10-10"
+  - target: "state_machine:syncrule"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_risk_guard.py（状态解析与 forbidden_states 派生断言）", strength: strong}
+    source_of_truth: "bkn/objects/syncrule.bkn「状态机」段（STOPPED/RUNNING/ABNORMAL/FULLSYNC）"
+    note: "RiskGuard `_get_states()` 解析 + `_derive_forbidden_states` 派生；14 条 state_prerequisite 约束依赖它"
+    needs: "补现场证据（日志/控制台状态输出）以确认状态取值与实际一致"
+    checked_at: "2026-10-10"
+  - target: "state_machine:worknode"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_risk_guard.py（状态解析与 forbidden_states 派生断言）", strength: strong}
+    source_of_truth: "bkn/objects/worknode.bkn「状态机」段（INACTIVE/ONLINE/OFFLINE；维护模式为与状态正交的开关，不入集合）"
+    note: "同上；`worknode_must_be_ONLINE` / `node_must_be_INACTIVE` 等约束依赖它（C-20261012-13 起状态名规范化，解析不再回退硬编码）"
+    needs: "补现场证据（日志/控制台状态输出）以确认状态取值与实际一致"
+    checked_at: "2026-10-10"
+  - target: "state_machine:iaproxy"
+    sources:
+      - {type: S4, ref: "plugin/tests/test_risk_guard.py（状态解析与 forbidden_states 派生断言）", strength: strong}
+    source_of_truth: "bkn/objects/iaproxy.bkn「状态机」段"
+    note: "状态归属映射（`_STATE_OWNER`）的候选来源——**待确认是否有约束依赖它**"
+    needs: "补现场证据（日志/控制台状态输出）以确认状态取值与实际一致"
+    checked_at: "2026-10-10"
+
+# ── 覆盖率（本批的起点度量，逐批补齐）──────────────────────────────
+coverage:
+  total_entries: 29
+  constraints_total: 26
+  constraints_strong: 14   # 有测试断言（代码行为可复现）
+  constraints_medium: 4   # 仅文档引用，须两源交叉
+  constraints_unknown: 8  # **零独立证据**——这是本批暴露的真实缺口
+  state_machines: 3      # 均有测试断言（强），但产品行为层待现场确认
+  target: "constraints_strong + medium+ 占比 100%；unknown 归零（逐批取证）"

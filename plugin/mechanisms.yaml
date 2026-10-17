@@ -1,0 +1,228 @@
+# plugin/mechanisms.yaml —— 机制层的**观测口径**侧车（Tool 层值数据）
+#
+# **属于哪一层**：机制「是什么」进本体（`bkn/objects/`，裸名 entity 类）；
+# 「怎么观测它成立」在本文件——字段语义、阈值、采样口径、判据档、案例引用。
+# 依据 02 号 §0.1⑦②「实质是匹配规则/枚举值/阈值的，属值数据，一律下延」。
+#
+# **2026-10-13（M-2 首填）**：机制集从空表填入 **4 条**（1 根类 ＋ 3 子类）。
+# 证据＝49 号对 log-mode **全部 83 条**做的 R5 三角（21 条机制级 → **0 个需要新机制**）。
+# 仍遵守 29 号 §2.3 防膨胀纪律：新案例落在已有机制里**只加边/判据，本体不动**。
+#
+# **2026-10-13（M-3 判据表）**：每条机制补 `criterion`（29 号 §4.2 的字段契约），使「判据档与观测口径齐备」
+# 从**自由文本**变成**可机检**；并补上**反证项** `counter_check`——继承 `multi-evidence-diagnosis` 的要求：
+# **判据必须能被否证，否则不是判据**（只有「像」没有「不像」的不是判据，是一句形容词）。
+# 写不出的部分一律用 `deferred` 显式标注（不许假装完备）——`delay` 的量级比较即卡在此。
+#
+# 依据: doc/optimize/49-mechanism-triage.md · 50-mechanism-m2-argument.md · 52-mechanism-m3-criteria.md（M-3 论证）
+#      · 40 号 §5.3/§7 · 29 号 §2.1/§2.3/§4.2/§4.3 · Q27（码不是查表维度）
+schema: 1
+measured_at: 2026-10-13
+
+# 判据档（29 号 §4.2 已裁，四档）
+criteria_tiers:
+  auto: "可由既有日志/接口字段自动判定"
+  sampling: "需主动采样（如抓栈、采样重试循环）"
+  cross_source: "需跨源对账（如控制面注册 vs 数据面实际）"
+  human_only: "写不出判据，只能由人判"
+
+# 判据契约（29 号 §4.2；**机检**见 plugin/tests/test_mechanisms.py）
+#   每条机制的 criterion 是一个**列表**（多证据：一条机制可有多条判据，各带自己的档）。
+criterion_contract:
+  tier: "∈ {auto, sampling, cross_source, human_only}（四档定义见上）"
+  type: "∈ {log_text, log_text+sequence, field_condition, structural}——**刻意不含 error_code**：Q27 已裁「码不是查表维度」（码空间随外部线性增长），码只作为**文本**出现在 patterns 里"
+  patterns: "日志原文片段，逐字可匹配；type ∈ {log_text, log_text+sequence} 必填"
+  sequence: "出现次序／时间窗要求；type = log_text+sequence 必填"
+  fields: "比较用的字段名（引用 plugin/field_semantics.yaml 时必须同名）；无字段比较则空表"
+  condition: "字段条件表达式；type = field_condition 必填"
+  statement: "结构式判据；type = structural 必填（须只用既有本体元素表达，40 号 R5）"
+  evidence_strength: "∈ {hard, soft}——**必填**。hard＝进程/端口/计数/状态记录（可独立复核的事实）；soft＝单行日志文本（易次生）。继承 multi-evidence：**纯软证据只能到 unknown，不能到 confirmed**"
+  hardened_by: "**soft 必填**：能与它交叉验证的那条**独立硬证据**（硬化路径）——缺它则该判据永远到不了 confirmed，只能停在 unknown"
+  counter_check: "**否证条件**：若它成立 ⇒ 本机制不成立。**每条 criterion 必填**（继承 multi-evidence-diagnosis）"
+  counter_patterns: "**否证条件的机检形态**（可选，C-20261013-15）：文本片段表，**全部命中** ⇒ 本机制 excluded。缺省＝否定推理仍须人判——散文式 counter_check（含「无 X 记录」这类**否定**语义）不自动判"
+  false_positive_note: "已知假象面（可选）"
+  deferred: "写不出的部分及原因（可选）——诚实标注，不许假装完备"
+  evidence: "该判据的出处（bug-analysis / 现场素材 / 模式库 id）"
+# 机制级档位 = 本条 criterion[] 里的**最高档**（档序：auto < sampling < cross_source < human_only）
+tier_order: ["auto", "sampling", "cross_source", "human_only"]
+
+# 收敛规则（29 号 §4.4，继承 multi-evidence-diagnosis）——机检见 test_convergence_block
+convergence:
+  states: ["confirmed", "excluded", "unknown"]
+  source_independence: "两条判据属**独立来源**才计两条：不同机器 / 不同进程 / 不同类别（控制面读数 vs 数据面事实 vs 内核记录）。**同一日志的第二行不算**（multi-evidence 原文纪律）"
+  requirements:
+    confirmed: "≥2 个**独立来源**的判据命中，且其中 **≥1 条 hard**；同源多命中只算 1"
+    excluded: "任一 counter_check 成立 ⇒ excluded，并**留档**（不许静默丢弃——假阴性比假阳性更贵）"
+    unknown: "证据不足、或**只有软证据** ⇒ unknown。这是**合法输出**：不许用推测填空"
+  hard_cap: "**纯软证据只能到 unknown，不能到 confirmed**——软证据必须由一条独立硬证据硬化（见 criterion.hardened_by）"
+  silence_principle: "输出必须含「**沉默端在做什么**」：报错端给症状、沉默端给真相（cross-process-correlation）"
+  causal_chain: "候选机制链按因果层排列（触发 → 放大 → 终末）——**当前无实例**：triggers/amplifies 在 bkn/relations/mechanism_causality.bkn 里按设计留空（50 号 §5）；链的排序逻辑待机制间边落内容后启用"
+
+# 字段契约（每条机制的条目形状）
+entry_fields:
+  - "id：机制标识，须与 bkn/objects/ 中的 entity 类同名（裸名）"
+  - "kind：根类 / 子类（缺省＝子类）"
+  - "necessary_criteria：必要判据，**必须只用既有本体元素表达**（dimension:* / 关系类型 / 状态机取值）——这是「是类」的判据（40 号 R5）"
+  - "criteria_tier：判据档（上列四档之一；**等于** criterion[] 里的最高档，机检）"
+  - "criterion：**判据表**（29 号 §4.2 契约，逐项见 criterion_contract）——**必填、非空列表**"
+  - "sampling：仅 criteria_tier = sampling 时为非空对象（采什么 / 怎么看 / 阈值）"
+  - "observations：**非判据**的观测口径（时间窗 / 假象面 / 延后项）——值数据，不进本体"
+  - "sources：案例引用（bug-analysis / 现场素材），供 M-1 逐案过尺子"
+
+mechanisms:
+  - id: fault_mechanism
+    kind: 根类
+    necessary_criteria:
+      - "起点：某单元在 dimension:* 上异常，或某 process:*/syncrule 的状态机取值异常"
+      - "结构：起点到受影响单元之间存在既有关系路径（feeds / reads_from / runs_on / registered_on / supervises）"
+      - "可归因：受影响单元的异常可由起点的异常解释"
+    criteria_tier: cross_source
+    criterion:
+      - tier: cross_source
+        type: structural
+        statement: "见本条目 necessary_criteria（三条须同时成立）"
+        fields: []
+        evidence_strength: soft
+        hardened_by: "子类的 hard 判据（进程清单 / 内核记录 / 状态字段）——根类**不独立出证**，它的 confirmed 必须由某个子类的 hard 证据支撑"
+        counter_check: "三条中任一不成立 ⇒ 本机制不成立；尤其「受影响单元的异常**不能**由起点解释」时（两件各自独立的故障）"
+        false_positive_note: "把两件独立故障读成一条机制——正是 observations.window 要挡的那件事"
+        evidence: "CASE-0004 / CASE-0005 / CASE-0006 / CASE-0007（四条各自独立，均满足三判据）"
+    observations:
+      pattern: "三判据须在**同一时间窗**内取证；否则会把「两件独立故障」读成一条机制"
+      window: "建议 ≤ 规则状态转停的同一分钟（各案实测：系统日志与 load_error 时间差 <3s，如 LP-0069）"
+      fields: "控制面读数取 SvcManager 注册 / 规则状态；数据面事实取进程存活与线程栈"
+    sources:
+      - "doc/optimize/49-mechanism-triage.md §1（四桶口径）/ §4（覆盖矩阵）"
+      - "doc/process/bug-analysis/CASE-0004 .. CASE-0007"
+  - id: control_plane_desync
+    kind: 子类
+    necessary_criteria:
+      - "控制面读数：某 process:*/syncrule 的注册状态或任务计数取「正常」值"
+      - "数据面事实：同一单元实际取相反值（进程不存在 / 线程已退出 / 规则已停但仍在跑）"
+      - "否证：两条读数不可能同时为真"
+    criteria_tier: cross_source
+    criterion:
+      - tier: cross_source
+        type: log_text
+        patterns:
+          - "SvcManager service [track:<pid>] online, but process not found"
+        fields: []
+        evidence_strength: soft
+        hardened_by: "「jps」/「ps」的**进程清单**（进程存在性＝进程级事实，hard）——与日志文本**独立**：一个是控制面自述、一个是内核/进程表"
+        counter_check: "「jps」输出里**存在** iatrack ⇒ 控制面与数据面一致，本机制不成立"
+        counter_patterns:
+          - "jps"
+          - "iatrack"
+        false_positive_note: "「日志报 idle」「SvcManager 报 online」都是**控制面自述**，不是数据面事实——LP-0027 / LP-0036 / LP-0083 的假象面正是这一层"
+        evidence: "CASE-0004 §1（同一行内两个断言互相否证，无需二次推断）"
+      - tier: auto
+        type: field_condition
+        fields: ["state_time", "last_op", "delay"]
+        condition: "state_time 长时间未上送 ∧ last_op = resume ∧ delay 处于高位"
+        evidence_strength: hard
+        counter_check: "state_time 在正常间隔内持续刷新 ⇒ 控制面仍在推进，本机制不成立"
+        deferred: "「delay」的**量级**比较待单位确认（见 plugin/field_semantics.yaml 的 refinements）——单位未定前只用「未上送时长」与「last_op 形态」两项"
+        evidence: "2026-10-08/09 现场报告 D2（增量静默停止：delay=719849000、last_op=resume）"
+    observations:
+      pattern: "对照「控制面**报什么**」与「数据面**是什么**」两组读数；相等 → 本机制不成立"
+      fields: "控制面＝SvcManager 注册状态 / 规则状态 / 任务 running 计数；数据面＝进程存活（ps）/ 线程栈（jstack）/ 进程日志末行时间"
+      pitfall: "「日志报 idle」「SvcManager 报 online」都是**控制面自述**，不是数据面事实——LP-0027 / LP-0036 / LP-0083 的假象面正是这一层"
+      window: "同一分钟（LP-0083：running 恒为 1 与实测 54 个已退出线程对照）"
+    sources:
+      - "doc/process/bug-analysis/CASE-0004-SvcManager报track在线但进程不存在-控制面与数据面不一致致增量静默停止.md"
+      - "现场素材：log-mode 模式库 LP-0005 / LP-0023 / LP-0027 / LP-0030 / LP-0032 / LP-0036 / LP-0037 / LP-0057 / LP-0083（审计区，不入库）"
+  - id: resource_exhaustion_cascade
+    kind: 子类
+    necessary_criteria:
+      - "起点：某单元在 dimension:resource 上异常"
+      - "结构：该单元存在下游（经 feeds / reads_from 从起点可达）"
+      - "传导：可达的下游出现阻塞或失败（dimension:resource 异常，或状态机取值异常）"
+    criteria_tier: sampling
+    criterion:
+      - tier: sampling
+        type: log_text+sequence
+        patterns:
+          - "Killed process <pid> (java)"
+          - "SocketException: Connection reset"
+          - "failed to close transfer client: timeout after 20000 milliseconds"
+          - "export update stage: stop, state: 4045"
+        sequence: "同一时间窗内**按序**：内核 OOM（dmesg）→ 通道被回收 → 导出重试耗尽 → 状态面转停（CASE-0005 的四步链）"
+        fields: ["stage"]
+        evidence_strength: hard
+        hardened_by: "（本判据的**首段**即 hard：内核 OOM 记录含 pid 与 SIGKILL，属内核执行事实）后两段 Connection reset / timeout 为**次生软证据**——次序正是它把它们绑成一条链"
+        counter_check: "dmesg 里**无** OOM 记录而只有 Connection reset ⇒ 起点不是资源耗尽（应查网络 / 对端）——终点报错往往不含资源语义"
+        evidence: "CASE-0005 §1 的四步日志表（① 内核执行者＝因 → ② 通道被回收 → ③ 重试耗尽 → ④ 状态面结果）"
+    sampling:
+      method: "jstack / 内存指标 / 内核 OOM 日志（dmesg）；LP-0080 靠 jstack 才定到 loader 堆"
+      thresholds: ["loader 堆 ≤ 物理内存 60%（LP-0069 复盘结论）", "available < -Xmx 时 JVM 启动即 ENOMEM（LP-0075）", "DataHub 单 shard 10MB/s 写限（LP-0033）"]
+    observations:
+      pattern: "须先确定**先耗尽的是哪一个单元**——终点报出的错误往往不含资源语义（易误判为目标库/网络问题）"
+    sources:
+      - "doc/process/bug-analysis/CASE-0005-loader被OOM-killer杀死-节点资源耗尽经传输通道外溢致导出连环失败.md"
+      - "现场素材：log-mode 模式库 LP-0009 / LP-0047 / LP-0059 / LP-0062 / LP-0068 / LP-0069（审计区，不入库）"
+  - id: single_point_fail_stop
+    kind: 子类
+    necessary_criteria:
+      - "单点：失败的起点是单个单元或单条输入（可数、非「面」）"
+      - "升级：该单元所属的 process:* 或 syncrule 进入停机状态机取值（崩溃 / 退出 / 规则状态码转停）"
+    criteria_tier: auto
+    criterion:
+      - tier: auto
+        type: log_text
+        patterns:
+          - "java.lang.NoSuchMethodError"
+          - "dataConvert-<uuid>-thread-N"
+        fields: []
+        evidence_strength: soft
+        hardened_by: "规则**状态记录与时间**（2 秒内判 INTERNAL_ERROR＝状态机取值 ＋ 时序，hard）——异常文本与停机记录是两个独立来源"
+        counter_check: "export_all.log **只有** InterruptedException 而无 NoSuchMethodError ⇒ 那是**停机副作用**而非本模式；须查 dbdump_*_start.log 或 dumper stderr 确认真异常"
+        false_positive_note: "CASE-0006 §假象面：InterruptedException 是停机副作用（伴生报错晚于主因，非根因）"
+        evidence: "CASE-0006 的异常原文（dataConvert 全线程**立即**崩溃）＋ 规则 2 秒内判 INTERNAL_ERROR"
+      - tier: auto
+        type: field_condition
+        fields: ["stage", "dml_fail"]
+        condition: "单点失败后，其所属 process:*/syncrule 进入**停机**状态机取值（stage 取停机态；dml_fail 用于确认失败是否在累积）"
+        evidence_strength: hard
+        counter_check: "失败起点**不可数**（属「面」而非「单点」）⇒ 应看 resource_exhaustion_cascade，不是本机制"
+        evidence: "CASE-0006（规则 2 秒内停摆、0 表完成、dump 0 行）"
+    observations:
+      pattern: "先从日志取**失败起点**（栈顶 / 单行数据 / 单条 DDL），再看**停机范围**是否大于起点"
+      fields: "崩溃＝SIGSEGV / SIGABRT / NoSuchMethodError；转停＝规则状态码（如 4050、INTERNAL_ERROR）；卡死类需 jstack 才能定（LP-0057 / LP-0063）"
+      deferred: "「为什么没被隔离 / 为什么没有降级」＝实现属性，**本体无此面**（40 号 §4 判定本机制「需拆」，后半下延）——只在本文件记录，不进必要判据"
+    sources:
+      - "doc/process/bug-analysis/CASE-0006-Dumper启动即全线程崩溃-jackson双版本jar错配触发NoSuchMethodError致规则2秒停摆.md"
+      - "现场素材：log-mode 模式库 LP-0038 / LP-0042 / LP-0055 / LP-0063 / LP-0071 / LP-0076（审计区，不入库）"
+  - id: position_regression
+    kind: 子类
+    necessary_criteria:
+      - "起点：某单元在 dimension:log_readable 上异常（**位点不连续**：实际起点比交接点更旧）"
+      - "结构：受影响单元在起点**下游**（经 feeds / writes_to 可达）"
+      - "可归因：下游的重复/覆盖可由**起点位点旧**解释"
+    criteria_tier: auto
+    criterion:
+      - tier: auto
+        type: log_text
+        patterns:
+          - "fullsync point"
+          - "query binlog spot"
+        fields: []
+        evidence_strength: hard
+        # hard 的理由：虽取自日志文本，但判据是**两个已记录位点的数值比较**（计数/记录类），非「单行文本像不像」
+        counter_check: "两处 GTID **相等**（差值 = 0）⇒ 起点与交接点一致，本机制不成立"
+        false_positive_note: "若差值随全量时长**成正比**且恒不为 0，那是**设计上有意回退覆盖全量窗口**，不是本机制（CASE-0007 §2.4 的反证口径）"
+        evidence: "CASE-0007 §1 的日志原文（fullsync point 与 start lsn 两行可直接对账）"
+      - tier: auto
+        type: field_condition
+        fields: ["stage", "last_op"]
+        condition: "规则在跑（stage ≠ stop）却出现旧变更重放迹象（last_op 形态与增量推进不一致）"
+        evidence_strength: soft
+        hardened_by: "目标端**抽样比对**（数据面事实，hard）——本判据说的是「迹象」，必须由下游数据比对硬化后才能升 confirmed"
+        counter_check: "位点差值 = 0 且下游无重复 ⇒ 本机制不成立"
+        deferred: "「重复/覆盖」的下游确认需**目标端抽样比对**——本表只到起点侧判据"
+        evidence: "CASE-0007 §5 的现场处置口径（对比 fullsync point 与 query binlog spot 的 GTID）"
+    observations:
+      pattern: "**起点侧**可自动判（两处 GTID 直接对账）；**下游侧**（是否已发生重复/覆盖）需抽样比对——不在本判据内"
+      window: "同一个规则的相邻两行（交接点行与其后的起点行）"
+    sources:
+      - "doc/process/bug-analysis/CASE-0007-全量转增量交接位点回落-fullsync-point的GTID与实际连接节点不一致致旧增量静默重放.md（实战：双节点集群 15 轮交接中 10 轮起点偏旧）"
+      - "现场素材：log-mode 模式库 LP-0004 / LP-0061（4068 报错表现）/ LP-0064（静默回退） / LP-0070（审计区，不入库）"
+      - "skill/demo-product-log-analyzer/references/tf-deletion-breakpoint-regression.md（独立成因：位点文件删除）"

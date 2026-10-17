@@ -1,0 +1,35 @@
+---
+name: [对象中文名]
+id: [对象英文ID_与文件名一致]
+description: [一句话描述]
+aliases:
+  - [同义词1]
+---
+
+# Object: [对象英文名] ([对象中文名])
+
+> 零元信息：不写来源/演进注记；迭代记录 → `CHANGELOG.md`。
+> 本文件只含本体（定义/关键属性/关联）；值与命令由对应 Skill 提供。
+
+---
+
+<!-- type: entity -->
+## 定义
+
+[详细描述业务含义、使用场景、与其他对象的关系]
+
+<!-- type: entity -->
+## 关键属性
+
+- [属性名]: [说明]（类型枚举见 bkn/SCHEMA.md：string/decimal/integer/boolean/datetime/enum/object/array/json）
+
+<!-- type: entity -->
+## 状态机
+
+[如有状态流转，描述状态机；否则删除本段]
+
+<!-- type: entity -->
+## 关联
+
+→ actions/[xxx].bkn: [相关动作]
+→ risks/[xxx].bkn: [相关风险]

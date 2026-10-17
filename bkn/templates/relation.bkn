@@ -1,0 +1,11 @@
+<!-- type: relation -->
+## Relation: [关系名称]
+
+- **关系类型**: [runs_on/registered_on/supports/requires/constrains/implements/has_action/references/prerequisite/implements_skill/constrained_by/risks_of]
+- **中文名**: [中文关系名]
+- **源对象**: [源对象ID]
+- **目标对象**: [目标对象ID]
+- **类型**: [1:1/1:N/N:M]
+- **描述**: [关系的业务含义]
+- **映射规则**:
+  - `[源]` → `[目标]`  # [行内注释：业务含义；无实体的抽象目标加 (abstract) 后缀]
