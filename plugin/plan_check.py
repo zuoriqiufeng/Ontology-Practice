@@ -110,10 +110,11 @@ def check_plan(args, **kwargs):
               "violations": violations, "advisories": advisories, "todo": todo}
     out = json.dumps(result, ensure_ascii=False)
     try:
-        from .tools import _log_simple_call
-        _log_simple_call("check_plan", args, out, kwargs,
-                         steps=len(steps), violations=len(violations),
-                         advisories=len(advisories), todo=len(todo))
+        from .tools import _log_exempt_call
+        _log_exempt_call("check_plan", args, kwargs, out, out,
+                         usage_fields={"steps": len(steps), "violations": len(violations),
+                                        "advisories": len(advisories), "todo": len(todo)},
+                         assess=False)
     except Exception:  # noqa: BLE001
         pass
     return out

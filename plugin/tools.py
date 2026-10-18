@@ -535,7 +535,7 @@ def _session_ctx(ctx) -> dict:
     return out
 
 
-def _log_exempt_call(tool_name, args, kwargs, raw_result, final, usage_fields=None):
+def _log_exempt_call(tool_name, args, kwargs, raw_result, final, usage_fields=None, assess=True):
     """豁免 Tool 的统一埋点（批 U-1 轨迹 + 批 4-2 置信度，2026-10-12）。
 
     三个豁免 `_wrap` 的 Tool 此前**完全不判置信度、不进 gap_log**（22 号 §1.4#18），
@@ -552,7 +552,10 @@ def _log_exempt_call(tool_name, args, kwargs, raw_result, final, usage_fields=No
             # P1 本体台账：先按**返回体**记账（raw_result 是本题 Tool 自己的产物；
             # search_qdrant 走本豁免出口，raw_result 就是命中列表 → 文档来源在这里数）
             _record_ontology_body(tool_name, raw_result)
-            confidence, gaps = assess_confidence(raw_result, args, tool_name)
+            if assess:
+                confidence, gaps = assess_confidence(raw_result, args, tool_name)
+            else:
+                confidence, gaps = "full", []  # 计算型输出（摘要/核对）不判知识覆盖，避免 gap 噪声
             from .usage_log import log_usage
             from .trajectory import log_call
             _metrics = _usage_metrics(final)
@@ -561,7 +564,7 @@ def _log_exempt_call(tool_name, args, kwargs, raw_result, final, usage_fields=No
             # usage_fields 都不含 args 键（一旦含，Python 报重复关键字 → 整条埋点被静默吞掉）。
             log_usage(tool_name, record_type="call", confidence=confidence, args=_log_args(args),
                       **(usage_fields or {}), **_sctx, **_metrics)
-            if confidence != "full":
+            if assess and confidence != "full":
                 log_gap(tool_name, args, confidence, gaps, task_id=_sctx.get("task_id"))
             log_call(tool_name, args_snapshot=_log_args(args), ctx=kwargs, result=raw_result,
                      confidence=confidence, gaps=gaps,
@@ -570,30 +573,6 @@ def _log_exempt_call(tool_name, args, kwargs, raw_result, final, usage_fields=No
         except Exception:
             pass
 
-
-
-def _log_simple_call(tool_name, args, result, ctx=None, confidence="full", gaps=None, **extra):
-    """给不走 `_wrap()` 的新入口（bkn_ask / check_plan）补 usage ＋ trajectory 记录。
-
-    与 `_wrap()` 出口同源：args 快照用 `_log_args`、指标用 `_usage_metrics`、会话标识用 `_session_ctx(ctx)`；
-    `extra` 里的字段原样并入 usage 条目（便于后续分析/总结/优化）。异常静默。
-    """
-    try:
-        from .trajectory import log_call
-        from .usage_log import log_usage
-        sctx = _session_ctx(ctx)
-        snap = _log_args(args)
-        metrics = _usage_metrics(result)
-        payload = {"record_type": "call", "confidence": confidence, "args": snap}
-        payload.update(sctx)
-        payload.update(metrics)
-        payload.update(extra or {})
-        log_usage(tool_name, **payload)
-        log_call(tool_name, args_snapshot=snap, ctx=ctx, result=result, confidence=confidence,
-                 gaps=gaps or [], out_chars=metrics.get("out_chars"),
-                 duration_ms=metrics.get("duration_ms"))
-    except Exception:  # noqa: BLE001 — 观测失败绝不影响工具
-        pass
 
 
 def _wrap(result, args, tool_name, ctx=None):

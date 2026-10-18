@@ -28,7 +28,7 @@ def _route(q: str):
 
 
 def ask(args, **kwargs):
-    from .tools import HANDLERS, _init, _log_simple_call  # 懒加载，避免 tools→ask→tools 循环
+    from .tools import HANDLERS, _init, _log_exempt_call  # 懒加载，避免 tools→ask→tools 循环
     _init()
     q = str(args.get("question") or "").strip()
     detail = str(args.get("detail") or "summary").strip().lower()
@@ -49,10 +49,11 @@ def ask(args, **kwargs):
             payload = _summarize(tool, raw)
             payload["ref"] = "detail=ref 取全文"
             out = json.dumps(_trim(payload, 600), ensure_ascii=False)
-    _log_simple_call("bkn_ask", args, out, kwargs,
-                     route=(tool or "none"), detail=detail,
-                     summary_chars=len(out), raw_chars=len(raw),
-                     compression=round(len(raw) / max(len(out), 1), 2) if raw else None)
+    _log_exempt_call("bkn_ask", args, kwargs, raw or out, out,
+                     usage_fields={"route": tool or "none", "detail": detail,
+                                    "summary_chars": len(out), "raw_chars": len(raw),
+                                    "compression": round(len(raw) / max(len(out), 1), 2) if raw else None},
+                     assess=False)
     return out
 
 
