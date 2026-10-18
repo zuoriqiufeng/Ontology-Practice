@@ -1,9 +1,10 @@
 Ontology-Practice
 Copyright 2026 BKN contributors
 
-This product includes software originally developed for an internal BKN
-engineering workspace and released here under the Apache License, Version 2.0.
+Ontology-Practice is inspired by the BKN (Business Knowledge Network) ontology
+theory of AISHU (爱数). It is an independent engineering practice for product
+operations (运维): the goal is to make operations knowledge runnable, machine-
+checkable and evolvable, not to cover general-purpose BKN methodology.
 
-It also references the methodology of OpenBKN Engineering
-(Apache-2.0, https://github.com/) as an external comparison only;
-no source file from that project is copied into this repository.
+It also references the methodology of OpenBKN Engineering (Apache-2.0) as an
+external comparison only; no source file from that project is copied here.

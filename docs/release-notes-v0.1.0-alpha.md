@@ -17,9 +17,10 @@
 3. **测试只带运行时通用部分**：断言具体产品本体的测试属实例仓（清单见 `plugin/tests/README.md`）。
 4. **包名暂用 `plugin`**：历史命名，v0.2 计划改为 `bknkit`。
 
-## 与 OpenBKN Engineering 的关系
+## 与 OpenBKN Engineering 的区别
 
-[OpenBKN Engineering](https://github.com/)（Apache-2.0）提供 BKN 的**方法论与技能**；本仓提供**可运行、可门禁验证的工程闭环**。两者互补，本仓未复制其源码。
+理念原型是**爱数（AISHU）的 BKN 本体理论**；本项目是它在**产品运维**场景的工程实践（可运行、可机检）。
+与 OpenBKN Engineering（方法论 ＋ 技能集）**互补不替代**，本仓未复制其源码。
 
 ## 验收（发布前实测）
 
