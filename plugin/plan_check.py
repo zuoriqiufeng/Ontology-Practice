@@ -108,4 +108,12 @@ def check_plan(args, **kwargs):
                                "text": info.get("text"), "evidence": "risks/constraints.bkn"})
     result = {"ok": not violations, "checked_steps": len(steps),
               "violations": violations, "advisories": advisories, "todo": todo}
-    return json.dumps(result, ensure_ascii=False)
+    out = json.dumps(result, ensure_ascii=False)
+    try:
+        from .tools import _log_simple_call
+        _log_simple_call("check_plan", args, out, kwargs,
+                         steps=len(steps), violations=len(violations),
+                         advisories=len(advisories), todo=len(todo))
+    except Exception:  # noqa: BLE001
+        pass
+    return out

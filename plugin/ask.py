@@ -28,24 +28,32 @@ def _route(q: str):
 
 
 def ask(args, **kwargs):
-    from .tools import HANDLERS, _init  # 懒加载，避免 tools→ask→tools 循环
+    from .tools import HANDLERS, _init, _log_simple_call  # 懒加载，避免 tools→ask→tools 循环
     _init()
     q = str(args.get("question") or "").strip()
     detail = str(args.get("detail") or "summary").strip().lower()
     tool, sub = _route(q)
+    raw = ""
     if tool is None:
-        return json.dumps({
+        out = json.dumps({
             "answer": "未识别出本体入口（问题里没有错误码，也没有已登记的症状说法）",
             "evidence": [],
             "skills": [],
             "open": ["给出错误码，或换成已登记的症状说法（见 plugin/constants.py::SYMPTOM_ALIASES）"],
         }, ensure_ascii=False)
-    raw = HANDLERS[tool](sub)
-    if detail in ("ref", "full", "all"):
-        return raw
-    payload = _summarize(tool, raw)
-    payload["ref"] = "detail=ref 取全文"
-    return json.dumps(_trim(payload, 600), ensure_ascii=False)
+    else:
+        raw = HANDLERS[tool](sub)
+        if detail in ("ref", "full", "all"):
+            out = raw
+        else:
+            payload = _summarize(tool, raw)
+            payload["ref"] = "detail=ref 取全文"
+            out = json.dumps(_trim(payload, 600), ensure_ascii=False)
+    _log_simple_call("bkn_ask", args, out, kwargs,
+                     route=(tool or "none"), detail=detail,
+                     summary_chars=len(out), raw_chars=len(raw),
+                     compression=round(len(raw) / max(len(out), 1), 2) if raw else None)
+    return out
 
 
 def _summarize(tool: str, raw: str) -> dict:

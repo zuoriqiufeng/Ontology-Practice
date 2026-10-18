@@ -571,6 +571,31 @@ def _log_exempt_call(tool_name, args, kwargs, raw_result, final, usage_fields=No
             pass
 
 
+
+def _log_simple_call(tool_name, args, result, ctx=None, confidence="full", gaps=None, **extra):
+    """给不走 `_wrap()` 的新入口（bkn_ask / check_plan）补 usage ＋ trajectory 记录。
+
+    与 `_wrap()` 出口同源：args 快照用 `_log_args`、指标用 `_usage_metrics`、会话标识用 `_session_ctx(ctx)`；
+    `extra` 里的字段原样并入 usage 条目（便于后续分析/总结/优化）。异常静默。
+    """
+    try:
+        from .trajectory import log_call
+        from .usage_log import log_usage
+        sctx = _session_ctx(ctx)
+        snap = _log_args(args)
+        metrics = _usage_metrics(result)
+        payload = {"record_type": "call", "confidence": confidence, "args": snap}
+        payload.update(sctx)
+        payload.update(metrics)
+        payload.update(extra or {})
+        log_usage(tool_name, **payload)
+        log_call(tool_name, args_snapshot=snap, ctx=ctx, result=result, confidence=confidence,
+                 gaps=gaps or [], out_chars=metrics.get("out_chars"),
+                 duration_ms=metrics.get("duration_ms"))
+    except Exception:  # noqa: BLE001 — 观测失败绝不影响工具
+        pass
+
+
 def _wrap(result, args, tool_name, ctx=None):
     """通用包装: 置信度 + gap_log + Qdrant 兜底(SEARCH_DEFER_TO_HERMES=true 时仍执行内部兜底,
     并额外返回 `_search_deferred`/`_instruction` 供 Agent 自主补查) + context_loader 处理
