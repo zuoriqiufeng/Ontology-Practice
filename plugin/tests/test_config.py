@@ -99,8 +99,8 @@ class TestScalarSoftening(unittest.TestCase):
 
 class TestImportWithoutPyyaml(unittest.TestCase):
 
-    def test_plugin_registers_thirteen_tools_without_pyyaml(self):
-        """端到端回归：屏蔽 yaml → 子进程导入插件 + register() 仍注册 13 Tool。
+    def test_plugin_registers_all_tools_without_pyyaml(self):
+        """端到端回归：屏蔽 yaml → 子进程导入插件 + register() 仍注册全部 Tool（15）。
 
         （`sys.modules['yaml'] = None` 让 `import yaml` 抛 ImportError，与缺库等价。）
         """
@@ -128,7 +128,7 @@ class TestImportWithoutPyyaml(unittest.TestCase):
             r = subprocess.run([sys.executable, "-c", code], capture_output=True,
                                text=True, env=env, cwd=str(ROOT), timeout=180)
         self.assertEqual(r.returncode, 0, (r.stdout[-500:], r.stderr[-1500:]))
-        self.assertIn("TOOLS 13", r.stdout)
+        self.assertIn("TOOLS 15", r.stdout)
 
 
 if __name__ == "__main__":

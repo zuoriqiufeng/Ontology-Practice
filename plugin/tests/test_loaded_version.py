@@ -90,7 +90,7 @@ class TestLoadedVersion(unittest.TestCase):
                  mock.patch.object(config, "BKN_ROOT", str(root)):
                 import plugin
                 plugin.register(api)
-            self.assertEqual(len(api.tools), 13)  # 54 号：+diagnose_mechanism
+            self.assertEqual(len(api.tools), 15)  # 本轮新增 bkn_ask/check_plan
             self.assertTrue(lv.is_file(), "register() 应写服务自证")
             self.assertEqual(json.loads(lv.read_text(encoding="utf-8"))["trigger"], "register")
 
