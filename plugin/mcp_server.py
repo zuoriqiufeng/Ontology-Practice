@@ -11,11 +11,12 @@
   * **复用现有 handler**：tools 就是 `plugin.tools.HANDLERS`（15 个），不复制逻辑；
   * **resources 只读**：卡片来自 `plugin.cards`，schema/维度来自 `bkn/`；
   * **不暴露写操作**：本进程只做查询与核对；
-  * 不监听网络端口（v0 只支持 stdio，由客户端拉起）。
+  * stdio ＋ HTTP JSON-RPC（POST /mcp）；HTTP 默认只绑 127.0.0.1，可用 BKN_MCP_TOKEN 开 Bearer 鉴权。
 """
 from __future__ import annotations
 
 import json
+import os
 import sys
 
 from .cards import BKN_ROOT, build_card
@@ -25,20 +26,13 @@ SERVER_INFO = {"name": "bkn-ontology", "version": "0.3.0"}
 
 
 def _handlers():
-    from .ask import ask
-    from .plan_check import check_plan
     from .tools import HANDLERS
-    merged = dict(HANDLERS)
-    merged["bkn_ask"] = ask
-    merged["check_plan"] = check_plan
-    return merged
+    return HANDLERS
 
 
 def _schemas():
-    from .ask import SCHEMA as ASK_SCHEMA
-    from .plan_check import SCHEMA as PLAN_SCHEMA
     from .schemas import SCHEMAS
-    return list(SCHEMAS) + [ASK_SCHEMA, PLAN_SCHEMA]
+    return SCHEMAS
 
 
 def _resources():
@@ -157,5 +151,93 @@ def serve_stdio(stream_in=None, stream_out=None) -> int:
     return 0
 
 
+
+# ---- HTTP 传输（streamable 子集）＋ Bearer 鉴权（C-20261018-12） ----
+
+def _auth_token() -> str:
+    """token 来源：环境变量 BKN_MCP_TOKEN 优先，其次 config.yaml mcp.token。空＝不鉴权。"""
+    try:
+        from .config import _config
+        cfg = (_config.get("mcp", {}) or {}).get("token") or ""
+    except Exception:  # noqa: BLE001
+        cfg = ""
+    return str(os.environ.get("BKN_MCP_TOKEN") or cfg or "").strip()
+
+
+def _auth_ok(headers) -> bool:
+    token = _auth_token()
+    if not token:
+        return True
+    got = (headers.get("Authorization") or "").strip()
+    return got == "Bearer " + token
+
+
+def make_http_handler():
+    """返回一个 BaseHTTPRequestHandler 子类：POST /mcp（JSON-RPC）、GET /health。"""
+    from http.server import BaseHTTPRequestHandler
+
+    class _Handler(BaseHTTPRequestHandler):
+        server_version = "bkn-mcp/0.4"
+
+        def _send(self, code, payload):
+            body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self):
+            if self.path.split("?")[0] == "/health":
+                return self._send(200, {"ok": True, "server": SERVER_INFO})
+            return self._send(404, {"error": "not found"})
+
+        def do_POST(self):
+            if self.path.split("?")[0] != "/mcp":
+                return self._send(404, {"error": "not found"})
+            if not _auth_ok(self.headers):
+                return self._send(401, {"error": "unauthorized"})
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+                req = json.loads(self.rfile.read(n) or b"{}")
+            except Exception:  # noqa: BLE001
+                return self._send(400, {"jsonrpc": "2.0", "id": None,
+                                        "error": {"code": -32700, "message": "parse error"}})
+            resp = handle_request(req)
+            if resp is None:
+                return self._send(202, {"ok": True})
+            return self._send(200, resp)
+
+        def log_message(self, *args):  # 静默，避免污染客户端日志
+            return
+
+    return _Handler
+
+
+def serve_http(host: str = "127.0.0.1", port: int = 8765) -> int:
+    """HTTP JSON-RPC 服务；默认只绑本机。鉴权见 _auth_token()。"""
+    from http.server import ThreadingHTTPServer
+
+    srv = ThreadingHTTPServer((host, port), make_http_handler())
+    print("bkn MCP HTTP listening on http://%s:%d/mcp（health: /health；auth: %s）"
+          % (host, srv.server_address[1], "Bearer" if _auth_token() else "off"))
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        srv.server_close()
+    return 0
+
+
 if __name__ == "__main__":
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--http", action="store_true", help="用 HTTP 而不是 stdio")
+    ap.add_argument("--host", default="127.0.0.1")
+    ap.add_argument("--port", type=int, default=8765)
+    a = ap.parse_args()
+    if a.http:
+        raise SystemExit(serve_http(a.host, a.port))
     raise SystemExit(serve_stdio())

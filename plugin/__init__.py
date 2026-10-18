@@ -1,12 +1,13 @@
-"""demo_product-bkn Plugin — 注册 14 个 Tool + RiskGuard pre_tool_call hook
+"""demo_product-bkn Plugin — 注册 15 个 Tool + RiskGuard pre_tool_call hook
 
 Hermes 启动时调用 register(), 向 Plugin API 注册所有 Tool。
 可通过 config.yaml tools.enabled 选择性启用。
 v1.5: 注册 RiskGuard pre_tool_call hook（受控动作执行前的风险拦截，灰度期只记录）。
-P1 (C-20261018-03): 新增 bkn_ask（摘要优先入口）＋ 会话常驻守则（prompt section）。
+P1 (C-20261018-03): 会话常驻守则（prompt section）。
 P1b (C-20261018-04): 新增请求级注入（llm_request middleware）＋ @bkn: 引用（context reference）。
-P2 (C-20261018-05): 新增 check_plan（计划可行性机械核对）。
+P3 (C-20261018-11): bkn_ask / check_plan 并入 SCHEMAS + HANDLERS 单一注册路径（不再单独注册）。
 P2 (C-20261018-06): 新增全工具来源观测（tool_execution middleware）。
+P2 (C-20261018-10): 新增回答溯源守卫（llm_execution middleware，灰度观测）。
 """
 
 from .schemas import SCHEMAS
@@ -31,36 +32,6 @@ def register(plugin_api):
                 handler=handler,
             )
 
-    # P1 (C-20261018-03)：摘要优先入口 bkn_ask（不放进 SCHEMAS，避免改动 schemas.py）
-    try:
-        from .ask import SCHEMA as ASK_SCHEMA, ask as ask_handler
-        if not enabled or "bkn_ask" in enabled:
-            plugin_api.register_tool(
-                toolset="demo_product-bkn",
-                name="bkn_ask",
-                schema=ASK_SCHEMA,
-                handler=ask_handler,
-            )
-    except Exception:
-        import logging
-        logging.getLogger(__name__).warning("bkn_ask 注册失败（不影响旧工具）", exc_info=True)
-
-
-    # P2 (C-20261018-05)：计划可行性检查（机械核对前置与约束）
-    try:
-        from .plan_check import SCHEMA as PLAN_SCHEMA, check_plan as plan_check_handler
-        if not enabled or 'check_plan' in enabled:
-            plugin_api.register_tool(
-                toolset='demo_product-bkn',
-                name='check_plan',
-                schema=PLAN_SCHEMA,
-                handler=plan_check_handler,
-            )
-    except Exception:
-        import logging
-        logging.getLogger(__name__).warning('check_plan 注册失败（不影响旧工具）', exc_info=True)
-
-
     # P2 (C-20261018-06)：全工具来源观测（tool_execution middleware，只观测不改结果）
     try:
         from .trace import register_trace
@@ -68,6 +39,15 @@ def register(plugin_api):
     except Exception:
         import logging
         logging.getLogger(__name__).warning('trace middleware 注册失败（不影响工具）', exc_info=True)
+
+
+    # P2 (C-20261018-10)：回答溯源守卫（llm_execution middleware，灰度只观测）
+    try:
+        from .guard import register_guard
+        register_guard(plugin_api)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).warning('guard middleware 注册失败（不影响工具）', exc_info=True)
 
     # v1.5 (P0-4): RiskGuard — pre_tool_call hook 实现代码级风险护栏。
     # 灰度期 RISK_GUARD_BLOCK=false 只记录日志不阻断；

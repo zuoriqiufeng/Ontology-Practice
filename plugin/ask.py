@@ -12,28 +12,10 @@ import json
 import re
 
 from .constants import SYMPTOM_ALIASES
+from .schemas import BKN_ASK_SCHEMA
 from .tools import HANDLERS, _init
 
-SCHEMA = {
-    "name": "bkn_ask",
-    "description": (
-        "用一句话问本体：给错误码或症状描述，返回摘要（≤600 字：结论 + 证据 + 该找哪个 Skill + 还缺什么）。",
-        "当用户问「这个报错什么意思/怎么查」「某现象该怎么排查」时优先用它；",
-        "需要完整细节时再传 detail=ref 取全文（体积可能很大）。"
-    ),
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "question": {"type": "string", "description": "自然语言问题（含错误码或症状描述最佳）"},
-            "detail": {
-                "type": "string",
-                "enum": ["summary", "ref"],
-                "description": "summary=摘要（默认）；ref=旧工具的完整返回",
-            },
-        },
-        "required": ["question"],
-    },
-}
+SCHEMA = BKN_ASK_SCHEMA
 
 _CODE = re.compile(r"(?<![A-Za-z0-9])((?:[A-Za-z]{1,8}[-_]?)?[0-9]{3,5})(?![0-9])")
 

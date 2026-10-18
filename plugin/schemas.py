@@ -267,3 +267,55 @@ SCHEMAS = [
         }
     },
 ]
+
+# P3 统一注册（C-20261018-11）：两个新工具的 Schema 与 13 个原有工具同源
+BKN_ASK_SCHEMA = {
+    "name": "bkn_ask",
+    "description": (
+        "用一句话问本体：给错误码或症状描述，返回摘要（≤600 字：结论 + 证据 + 该找哪个 Skill + 还缺什么）。",
+        "当用户问「这个报错什么意思/怎么查」「某现象该怎么排查」时优先用它；",
+        "需要完整细节时再传 detail=ref 取全文（体积可能很大）。"
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "question": {"type": "string", "description": "自然语言问题（含错误码或症状描述最佳）"},
+            "detail": {
+                "type": "string",
+                "enum": ["summary", "ref"],
+                "description": "summary=摘要（默认）；ref=旧工具的完整返回",
+            },
+        },
+        "required": ["question"],
+    },
+}
+
+CHECK_PLAN_SCHEMA = {
+    "name": "check_plan",
+    "description": (
+        "检查一串运维步骤是否符合本体登记的前置与约束（机械核对，不推理）。",
+        "输入 steps=[{action, state?}] 与可选 states={对象: 状态}；",
+        "返回 violations（硬性不满足）、advisories（约束提醒）、todo（需人工确认）。"
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "steps": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "description": "动作名或别名（见 bkn/actions）"},
+                        "state": {"type": "string", "description": "目标对象当前状态（可选）"},
+                    },
+                    "required": ["action"],
+                },
+                "description": "按顺序执行的动作列表",
+            },
+            "states": {"type": "object", "description": "对象当前状态，如 {\"rule\": \"STOPPED\"}"},
+        },
+        "required": ["steps"],
+    },
+}
+
+SCHEMAS = SCHEMAS + [BKN_ASK_SCHEMA, CHECK_PLAN_SCHEMA]

@@ -12,34 +12,9 @@ import json
 import re
 
 from .cards import BKN_ROOT
+from .schemas import CHECK_PLAN_SCHEMA
 
-SCHEMA = {
-    "name": "check_plan",
-    "description": (
-        "检查一串运维步骤是否符合本体登记的前置与约束（机械核对，不推理）。",
-        "输入 steps=[{action, state?}] 与可选 states={对象: 状态}；",
-        "返回 violations（硬性不满足）、advisories（约束提醒）、todo（需人工确认）。"
-    ),
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "steps": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "action": {"type": "string", "description": "动作名或别名（见 bkn/actions）"},
-                        "state": {"type": "string", "description": "目标对象当前状态（可选）"},
-                    },
-                    "required": ["action"],
-                },
-                "description": "按顺序执行的动作列表",
-            },
-            "states": {"type": "object", "description": "对象当前状态，如 {\"rule\": \"STOPPED\"}"},
-        },
-        "required": ["steps"],
-    },
-}
+SCHEMA = CHECK_PLAN_SCHEMA
 
 _ROW = re.compile(r"^\|[^|]+\|[ \t]*([a-z_][a-z0-9_]*)[ \t]*\|[ \t]*([a-z_]+)[ \t]*\|[ \t]*(.+?)[ \t]*\|$")
 _REQ = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)[ \t]+must[ \t]+be[ \t]+([A-Za-z_][A-Za-z0-9_]*)")
