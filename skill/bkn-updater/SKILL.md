@@ -162,6 +162,13 @@ tools_used:
 > **新增诊断原则（`rule:*`）**：进 `risks/constraints.bkn`「全局约束与诊断原则」段（与约束同段，`rule:` 前缀，不补边）。
 > **迭代记录**：批次变更写 `90-history/bkn-changelog.md`，不写进 BKN 文件。
 
+## 升级检查清单（2026-10-18 补充）
+
+- [ ] 新增模块文件是否登记进 `plugin/__init__.py`（工具/守则/中间件分开注册，全部 try/except 降级）
+- [ ] middleware 是否真的落事件（`LOG_DIR=/tmp/x` 跑一次，看 `logs/trajectories/*.jsonl` 是否有 `answer_source`）
+- [ ] 重启后跑 `plugin/scripts/check_loaded_version.py` 自证
+- [ ] 若改了 `bkn/**`：版本 bump + 重启 + 复跑 gate
+
 ## References
 
 - [workflow-steps.md](references/workflow-steps.md) — 更新工作流

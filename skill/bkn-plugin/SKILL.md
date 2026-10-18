@@ -4,7 +4,7 @@ description: |
   【开发者参考 — 非诊断/分析场景勿加载】
   Demo Product BKN Plugin 架构与内部机制文档。仅限开发/维护/审计场景使用：
   理解 Plugin 代码结构、补充管道原理、置信度评估逻辑、Tool 注册流程。
-  ⚠️ 日常诊断/分析/方案设计直接调用 13 个 BKN Tool 即可，BKN Tool 是注册好的函数，
+  ⚠️ 日常诊断/分析/方案设计直接调用 15 个 BKN Tool 即可，BKN Tool 是注册好的函数，
   knowledge_context 直接消费，不需要加载此 Skill 理解底层 dispatch 机制。
 triggers:
   - "BKN Plugin 源码"
@@ -31,75 +31,30 @@ tools_used:
   - search_qdrant
   - check_action_risk
   - diagnose_mechanism
+  - bkn_ask
+  - check_plan
 ---
 
 # Demo Product BKN Plugin 架构
 
 ## 速览
 
-- **13 个 BKN Tool**：直接调用，不需要 skill_view
+- **15 个 BKN Tool**：直接调用，不需要 skill_view（新增 bkn_ask 摘要入口 / check_plan 计划核对）
+- **接入面四层**：会话守则 / 命中注入 / 摘要入口＋@bkn: / MCP(stdio)，见 build/01
 - **7 个 Operational Skill**：必须先 `resolve_operation` → 再 `skill_view`
 - **补充管道**：BKN 不足时 → `assess_confidence` → Skill 感知 + Qdrant 兜底 → `gap_log`
-- **当前版本**：Plugin v1.5（13 Tool + RiskGuard hook）/ 搜索链路 v3.8（diagnose_db_link 症状优先级 + Skill 强制）
+- **当前版本**：Plugin v1.6（15 Tool + RiskGuard + 守则/注入/引用/观测 + MCP）/ 搜索链路 v3.8（diagnose_db_link 症状优先级 + Skill 强制）
 - **关键铁律**：`search_qdrant` 必须传 `dimension`；`search_qdrant_handler` 必须返回 JSON string
 - **Hermes venv 依赖**：`qdrant-client` + `sentence-transformers` + `jieba` 缺一不可
 
 ---
 
-## 设计文档体系
+## 设计文档体系（2026-10-18 精简）
 
-BKN 相关文档分三层：
-
-| 层 | 路径 | 定位 | 说明 |
-|----|------|------|:--:|
-| **方法论** | `doc/_archived/methodology-legacy/` | 旧版 BKN 生成方案（**已归档 2026-10-12**；现行方法论＝`doc/optimize/23` 总纲 + `24` 构建源 + `doc/build/demo-product-bkn/02-bkn_design_philosophy.md` 本体七原则） | 3（归档） |
-| **工程实施** | `doc/build/demo-product-bkn/` | Plugin 实际实现（架构/Tool/搜索/部署）——现行件见其 `00-index.md`（20/22/23/35 号已归档至 `doc/_archived/build-history/`） | 见索引 |
-| **优化方案** | `doc/optimize/` | 方法论→实施的差距分析与优化计划——**现行主表见 `doc/optimize/00-index.md`**（01–12、18–20 已归档至 `doc/_archived/optimize-plans/`） | 见索引 |
-
-### 工程实施文档导航（doc/build/）
-
-```
-00-index.md          索引与阅读指南
-01-architecture.md   三层架构、13个Tool、设计目标
-10-design_constraints.md  关键设计约束与铁律
-11-design_rules_checklist.md  BKN内容规范、变更自检清单
-24-bkn_ontology.md  本体理论（由浅入深：一页看懂/形式/原理/公理与推理/治理/对位表）
-43-usage_log_analysis.md  使用侧可观测与取数指南（21 号 P1/P2 观测期）
-21-db_diagnostics_integration.md  数据库诊断工具集成设计
-30-modules.md        各文件/类/函数职责
-31-tools.md          13个Tool的Schema/Handler/返回契约
-（本体推理的能力边界见 doc/capability/ontology-inference.md；**推理的使用与建设标准见 skill:bkn-reasoning**；边走法实值见 skill:bkn-plugin/references/edge-semantics.md）
-32-supplement.md     Confidence-Gaps-Supplement、Qdrant兜底
-33-context_loader.md  Trim+Toon上下文压缩
-34-chunk-aware-search.md  search_qdrant块感知检索
-40-build.md          部署、重启加载、版本身份与四道门禁
-41-config_reference.md  config.yaml全字段说明
-42-review_checklist.md  变更前检查单
-```
-
-### 优化方案文档导航（doc/optimize/）
-
-```
-00-index.md      索引：现行主表 + 已归档指针（2026-10-12 起）
-00-changelog.md  调整台账（优化/工具/门禁的迭代记录唯一源）
-13-full-merged-execution-plan.md  三源合并执行清单 v2（01–12 号各条的 ✅ 追踪）
-14-symptom-ontology-design.md     诊断域本体化设计（判据来源）
-15/16/17-*.md     符合性审计 → 修复方案 → 复审（引用链）
-21-tool-skill-optimization.md     工具与 Skill 消耗优化（含执行记录）
-22-bkn-lifecycle-gate.md          门禁与可观测性（批 0–4 完成，批 5 待数据）
-23~36-*.md        本体工程体系（总纲/构建/使用/优化/版本/待审区/机制层/各期计划/复审/设计/事故）
-```
-
-> **已归档**：01–12、18–20、qdrant-… → `doc/_archived/optimize-plans/`（逐份理由见其 README）。
-> 新会话/新任务请先读 `00-index.md` 的现行主表，不要凭旧编号路径取文件。
-
-### 最高优先级原则：BKN 只负责思路，Skill 负责具体设计
-
-- BKN（.bkn 文件）只沉淀人类可读的诊断思路、风险上下文、排查方向和业务语义
-- Skill 负责把思路转化为可执行的命令、脚本、SQL、参数校验、输出解析和安全确认
-- Plugin Tool 只负责推荐合适的 Skill 并返回 BKN 风险上下文，不返回具体 action 列表
-
-详见 `doc/build/demo-product-bkn/10-design_constraints.md` 和 `11-design_rules_checklist.md`。
+- **工程实施文档**：`doc/build/demo-product-bkn/00-index.md`（现行表；01 架构 / 24 本体 / 30 模块 / 31 工具 / 42 检查单）
+- **优化与台账**：`doc/optimize/00-index.md` + `00-changelog.md`
+- **能力边界**：`doc/capability/capability-matrix.md`（总览）与 `ontology-inference.md`（推理专章）
+- 文档清单不再在本 skill 内重复（避免第二份真相）。
 
 ---
 

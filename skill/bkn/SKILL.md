@@ -86,7 +86,7 @@ BKN 生成 / 新建本体 / 设计知识网络 / 把文档变成 BKN / 生成 bk
 | 码含义（按日志消息文本命中 8 个 `dimension:*` 语义类别） | `plugin/error_semantics.yaml` |
 | Skill/Tool/Store 实现映射（`skill:` / `tool:` / `store:`） | `plugin/skill_manifest.yaml` |
 | 本体理论背景（四元终态 / 解析约定 / 治理，由浅入深） | `doc/build/demo-product-bkn/24-bkn_ontology.md` |
-| Plugin 内部机制 / 13 Tool / 检索与部署环境 | `skill:bkn-plugin`（开发者向） |
+| Plugin 内部机制 / 15 Tool / 检索与部署环境 | `skill:bkn-plugin`（开发者向） |
 | 产品与原理知识 | `{product_knowledge_skill}`（对照见下「产品事实委托」段） |
 | BKN 改动逻辑 | `skill:bkn-updater` |
 | 迭代记录（含类型/概念归档表） | `CHANGELOG.md` |
@@ -111,6 +111,15 @@ BKN 生成 / 新建本体 / 设计知识网络 / 把文档变成 BKN / 生成 bk
 > **新产品接入**：上表只是**当前产品示例**的对照——新产品的 BKN **不沿用** Demo Product 的事实
 > （库 / 端口 / 命令 / 阈值 / 案例全部作废），须为该产品**重新登记**一张占位符对照表，并给它建自己的产品 skill。
 > 产品专属实例（真实案例、具体命令、产品取值）落在产品 skill 的正文里，不在本件。
+
+## 工具速查（2026-10-18）
+
+| 场景 | 用什么 |
+|---|---|
+| 一句话问答（先摘要） | `bkn_ask`（≤600 字，detail=ref 取全文） |
+| 结构关系/影响面 | `resolve_relation` |
+| 执行前核对前置 | `check_plan`（只读） |
+| 其它 12 个工具 | 见 `doc/build/demo-product-bkn/31-tools.md` |
 
 ## References
 

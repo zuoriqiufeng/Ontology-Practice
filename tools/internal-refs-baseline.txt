@@ -1,3 +1,4 @@
+MAINTAINING.md
 plugin/CLAUDE.md
 plugin/README.md
 plugin/constants.py
@@ -22,6 +23,7 @@ scripts/m5_case_replay.py
 scripts/ontology_patrol.py
 scripts/pending_apply.py
 scripts/pending_status.py
+scripts/propose_candidates.py
 scripts/round_check.py
 scripts/sync_audit.py
 skill/bkn-intake/SKILL.md

@@ -96,6 +96,17 @@ doc/
 3. 生成 P1 覆盖矩阵找缺口
 4. 每月做一次 P2 效率 + 时效性审计
 
+## 新工具/接入面冒烟（2026-10-18 起）
+
+```bash
+# 1) 摘要入口
+LOG_DIR=/tmp/t python3 -c "import sys;sys.path.insert(0,'.');from plugin.ask import ask;print(len(ask({'question':'错误码 4050 是什么意思'})))"
+# 2) MCP stdio 往返
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | LOG_DIR=/tmp/t python3 -m plugin.mcp_server
+# 3) 离线评测（45 条）
+LOG_DIR=/tmp/t python3 scripts/eval_ontology.py --out /tmp/eval.md
+```
+
 ## 防坑
 
 - 测试不替代人工判断。P3 的准确率/路由率需要专家标注 ground truth

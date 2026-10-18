@@ -28,6 +28,8 @@ triggers:
 tools_used:
   - resolve_relation
   - diagnose_mechanism
+  - bkn_ask
+  - check_plan
   - diagnose_error
   - diagnose_db_link
   - read_file
@@ -44,18 +46,21 @@ tools_used:
 
 - **用途**：把「谁依赖谁 / 影响面 / 传递链 / 关联」翻成 resolve_relation 的标准调用，并如实标注边界
 - **结构出口**：resolve_relation(source_entity, relation_type, direction, depth)（唯一结构出口）
+- **摘要入口**：先 bkn_ask(question) 拿摘要（≤600 字：answer/evidence/skills/open），要细节再 detail=ref
 - **机制出口**：diagnose_mechanism(entry, observations, max_candidates)——候选 ＋ 判据命中 ＋ 证据缺口
+- **计划核对**：执行前用 check_plan(steps, states) 查状态前置/禁止序列（只读）
 - **排障接力出口**：resolve_relation(relation_type="diagnosis_path")——症状/码 → suspected_in → 进程 → Skill → 取证日志（单跳一次拿全）
 - **能力坐标**：L2（闭包 / 复合 / 反查 / 对称 ＋ 每跳依据）✅ 到位；L4（因果 / 机制）🟡 半落地（候选平铺，无因果排序）
 - **结构量（实测）**：203 节点 / 223 边 / 29 关系类型（python3 plugin/scripts/graph_metrics.py）
 - **硬上限（walk_policy 实值）**：可穿边 **25 种**、max_depth=5、max_paths=12、stop_at 4 前缀（skill: / log: / dimension: / mechanism:，**不含 store:**）；工具 schema 的 depth 上限为 **3**
 - **不物化**：派生路径按需求值，不写回 graph / 基线（结构量因此不变）
 
-## 排障接力（诊断之后必须再推理一次）
+## 排障接力（摘要 → 推理 → 计划核对）
 
 `diagnose_error` / `diagnose_db_link` 返回里出现 `dimensions` 或 `suspected_process` 非空时，**必须**再走一次推理出口，
 否则只拿到「码的表层含义」，没拿到「谁该看、看哪份日志、归哪个 Skill」：
 
+0. 先 `bkn_ask(question="<原话>")` 拿摘要（证据＋该找的 Skill＋还缺什么），再决定是否下钻；
 1. `resolve_relation(relation_type="diagnosis_path", source_entity="<码或症状 ID>")` —— 一次取回「命中进程 → 关联 Skill → 取证日志 → 检索源」；
 2. 若问「哪个环节导致的」，走 `diagnose_mechanism(entry="<码或症状>", observations=[...])` —— 候选机制 ＋ 还差哪块证据；
 3. 两条出口都只给**结构/候选**：根因定论仍走人（见下方分流边界表）。
