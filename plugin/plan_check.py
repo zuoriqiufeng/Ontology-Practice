@@ -12,9 +12,6 @@ import json
 import re
 
 from .cards import BKN_ROOT
-from .schemas import CHECK_PLAN_SCHEMA
-
-SCHEMA = CHECK_PLAN_SCHEMA
 
 _ROW = re.compile(r"^\|[^|]+\|[ \t]*([a-z_][a-z0-9_]*)[ \t]*\|[ \t]*([a-z_]+)[ \t]*\|[ \t]*(.+?)[ \t]*\|$")
 _REQ = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)[ \t]+must[ \t]+be[ \t]+([A-Za-z_][A-Za-z0-9_]*)")

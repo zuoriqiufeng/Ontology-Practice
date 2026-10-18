@@ -266,10 +266,7 @@ SCHEMAS = [
             "required": ["entry"]
         }
     },
-]
-
-# P3 统一注册（C-20261018-11）：两个新工具的 Schema 与 13 个原有工具同源
-BKN_ASK_SCHEMA = {
+{
     "name": "bkn_ask",
     "description": (
         "用一句话问本体：给错误码或症状描述，返回摘要（≤600 字：结论 + 证据 + 该找哪个 Skill + 还缺什么）。",
@@ -288,9 +285,8 @@ BKN_ASK_SCHEMA = {
         },
         "required": ["question"],
     },
-}
-
-CHECK_PLAN_SCHEMA = {
+},
+{
     "name": "check_plan",
     "description": (
         "检查一串运维步骤是否符合本体登记的前置与约束（机械核对，不推理）。",
@@ -316,6 +312,5 @@ CHECK_PLAN_SCHEMA = {
         },
         "required": ["steps"],
     },
-}
-
-SCHEMAS = SCHEMAS + [BKN_ASK_SCHEMA, CHECK_PLAN_SCHEMA]
+},
+]

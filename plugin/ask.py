@@ -12,10 +12,6 @@ import json
 import re
 
 from .constants import SYMPTOM_ALIASES
-from .schemas import BKN_ASK_SCHEMA
-from .tools import HANDLERS, _init
-
-SCHEMA = BKN_ASK_SCHEMA
 
 _CODE = re.compile(r"(?<![A-Za-z0-9])((?:[A-Za-z]{1,8}[-_]?)?[0-9]{3,5})(?![0-9])")
 
@@ -32,6 +28,7 @@ def _route(q: str):
 
 
 def ask(args, **kwargs):
+    from .tools import HANDLERS, _init  # 懒加载，避免 tools→ask→tools 循环
     _init()
     q = str(args.get("question") or "").strip()
     detail = str(args.get("detail") or "summary").strip().lower()

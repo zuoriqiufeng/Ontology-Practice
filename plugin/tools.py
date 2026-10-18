@@ -12,6 +12,8 @@ import threading
 import time
 from contextlib import contextmanager
 from typing import Optional
+from .ask import ask as bkn_ask_handler
+from .plan_check import check_plan as check_plan_handler
 from .resolver import BKNResolver, synthesize_operation_knowledge
 from .relations import RelationTraverser
 from .context_loader import ContextLoader
@@ -2270,15 +2272,6 @@ def diagnose_mechanism(args, **kwargs):
     }, args, "diagnose_mechanism", ctx=kwargs)
 
 
-def _bkn_ask_handler(args, **kwargs):
-    from .ask import ask
-    return ask(args, **kwargs)
-
-def _check_plan_handler(args, **kwargs):
-    from .plan_check import check_plan
-    return check_plan(args, **kwargs)
-
-
 # ========== Handler 注册表 ==========
 
 HANDLERS = {name: _timed_handler(fn, name) for name, fn in {
@@ -2295,6 +2288,6 @@ HANDLERS = {name: _timed_handler(fn, name) for name, fn in {
     "diagnose_db_link": diagnose_db_link_handler,
     "check_action_risk": check_action_risk_handler,
     "diagnose_mechanism": diagnose_mechanism,
-    "bkn_ask": _bkn_ask_handler,
-    "check_plan": _check_plan_handler,
+    "bkn_ask": bkn_ask_handler,
+    "check_plan": check_plan_handler,
 }.items()}
