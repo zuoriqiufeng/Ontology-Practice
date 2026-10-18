@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "bkn-ontology-kit"
+name = "ontology-practice"
 version = "0.1.0a0"
-description = "BKN (Business Knowledge Network) ontology kit: spec, runnable reference runtime, and governance toolchain"
+description = "Ontology-Practice: a BKN (Business Knowledge Network) practice kit — spec, runnable reference runtime, and governance toolchain"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "Apache-2.0" }

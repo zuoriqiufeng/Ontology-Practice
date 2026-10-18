@@ -1,4 +1,4 @@
-# BKN Ontology Kit（本体工程套件）
+# Ontology-Practice（BKN 本体工程实践套件）
 
 **BKN（Business Knowledge Network，业务知识网络）** 是给 Agent 用的领域知识层：
 用「类 · 边 · 实例登记」描述一个产品的世界模型，让 Agent 先「想对」再「动手」。

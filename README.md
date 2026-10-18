@@ -1,8 +1,10 @@
-# BKN Ontology Kit（工作骨架 · P1）
+# Ontology-Practice
 
 > **状态：v0.1.0-alpha（本地已就绪，待推送远端）**。绿名单迁出、全仓去产品化、规范 7 篇、示例本体、上手文档与 CI 齐备。
 
-BKN（Business Knowledge Network，业务知识网络）是给 Agent 用的**领域知识层**：
+**BKN（Business Knowledge Network，业务知识网络）** 的工程实践套件：规范（spec）、可运行参考实现（runtime）、治理工具链（governance）。
+
+BKN 是给 Agent 用的**领域知识层**：
 用「类 · 边 · 实例登记」描述一个产品的世界模型，让 Agent 先「想对」再「动手」。
 本仓要发布的是 **SPEC ＋ 可运行参考实现 ＋ 治理工具链**（不是又一个 skill 集）。
 

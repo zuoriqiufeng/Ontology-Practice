@@ -3,7 +3,7 @@
 ## 1. 安装
 
 ```bash
-git clone <this-repo> bkn-ontology-kit && cd bkn-ontology-kit
+git clone <this-repo> Ontology-Practice && cd Ontology-Practice
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 ```
