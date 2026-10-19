@@ -91,7 +91,7 @@ SCHEMAS = [
     },
     {
         "name": "diagnose_error",
-        "description": "根据错误码诊断 Demo Product 同步异常。返回错误原因、修复步骤、可能违反的操作约束。当用户报告错误码或描述异常时调用。",
+        "description": "诊断 **Demo Product 产品错误码**（产品码表 / -NNNN）。不确定码来源（如 ORA-/TNS-/SQLSTATE/1062 等数据库原生码）时，先用 bkn_ask（它会按来源分流）。",
         "parameters": {
             "type": "object",
             "properties": {
@@ -271,6 +271,7 @@ SCHEMAS = [
     "description": (
         "用一句话问本体：给错误码或症状描述，返回摘要（≤600 字：结论 + 证据 + 该找哪个 Skill + 还缺什么）。"
         "当用户问「这个报错什么意思/怎么查」「某现象该怎么排查」时优先用它；"
+        "数据库原生码（ORA-/TNS-/SQLSTATE/1062…）也用它：会按来源分流到产品诊断或 DB 诊断。"
         "需要完整细节时再传 detail=ref 取全文（体积可能很大）。"
     ),
     "parameters": {

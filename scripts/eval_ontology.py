@@ -11,7 +11,7 @@
 
 用法：
     LOG_DIR=/tmp/bkn-eval-logs python3 scripts/eval_ontology.py \
-        --cases evals/cases/ontology_qa_45.jsonl --out /tmp/eval.md
+        --cases evals/cases/ontology_qa_50.jsonl --out /tmp/eval.md
 """
 import argparse
 import json
@@ -113,7 +113,7 @@ def report(rows: list, cases_path: Path) -> tuple:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cases", default=str(ROOT / "evals" / "cases" / "ontology_qa_45.jsonl"))
+    ap.add_argument("--cases", default=str(ROOT / "evals" / "cases" / "ontology_qa_50.jsonl"))
     ap.add_argument("--out", default="")
     ap.add_argument("--limit", type=int, default=0)
     a = ap.parse_args()

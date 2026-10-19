@@ -1,0 +1,17 @@
+schema: 1
+# 错误码来源分类规则（有界：≤20 条；只描述形状/来源，不解释含义、不枚举产品码）
+# origin: product / oracle / mysql / postgres / db2 / sqlserver / sqlstate / ambiguous / unknown
+# ambiguous: true 表示「单凭码形无法断言」，需 message 或 db_type 才能落定
+rules:
+  - {id: oracle_ora, origin: oracle, vendor: oracle, pattern: '^ORA-?[0-9]{3,5}$'}
+  - {id: oracle_tns, origin: oracle, vendor: oracle, pattern: '^TNS-[0-9]{3,5}$'}
+  - {id: oracle_pls, origin: oracle, vendor: oracle, pattern: '^PLS-[0-9]{3,5}$'}
+  - {id: sqlstate_5, origin: sqlstate, vendor: '', pattern: '^[0-9A-Z]{5}$', ambiguous: true}
+  - {id: db2_negative, origin: db2, vendor: db2, pattern: '^-[0-9]{4,5}$', ambiguous: true}
+  - {id: numeric_4_5, origin: mysql, vendor: mysql, pattern: '^[0-9]{4,5}$', ambiguous: true}
+message_rules:
+  - {id: msg_ora, origin: oracle, vendor: oracle, pattern: 'ORA-[0-9]{3,5}'}
+  - {id: msg_tns, origin: oracle, vendor: oracle, pattern: 'TNS-[0-9]{3,5}'}
+  - {id: msg_sqlstate, origin: sqlstate, vendor: '', pattern: 'SQLSTATE'}
+  - {id: msg_mysql, origin: mysql, vendor: mysql, pattern: 'ERROR [0-9]{4}|Duplicate entry'}
+  - {id: msg_mssql, origin: sqlserver, vendor: sqlserver, pattern: 'Msg [0-9]{4}|SQLServer'}

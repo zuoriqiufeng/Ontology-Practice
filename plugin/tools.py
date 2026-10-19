@@ -535,7 +535,7 @@ def _session_ctx(ctx) -> dict:
     return out
 
 
-def _log_exempt_call(tool_name, args, kwargs, raw_result, final, usage_fields=None, assess=True):
+def _log_exempt_call(tool_name, args, kwargs, raw_result, final, usage_fields=None, assess=True, confidence=None):
     """豁免 Tool 的统一埋点（批 U-1 轨迹 + 批 4-2 置信度，2026-10-12）。
 
     三个豁免 `_wrap` 的 Tool 此前**完全不判置信度、不进 gap_log**（22 号 §1.4#18），
@@ -555,7 +555,7 @@ def _log_exempt_call(tool_name, args, kwargs, raw_result, final, usage_fields=No
             if assess:
                 confidence, gaps = assess_confidence(raw_result, args, tool_name)
             else:
-                confidence, gaps = "full", []  # 计算型输出（摘要/核对）不判知识覆盖，避免 gap 噪声
+                confidence, gaps = (confidence or "full"), []  # 计算型输出不判知识覆盖；可由调用方给定
             from .usage_log import log_usage
             from .trajectory import log_call
             _metrics = _usage_metrics(final)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """gen_eval_cases.py — 从本体/侧车内容生成 P0 评测用例（确定性、可复跑）。
 
-产出：evals/cases/ontology_qa_45.jsonl
+产出：evals/cases/ontology_qa_50.jsonl
   20 条症状用例（SYMPTOM_ALIASES → diagnose_db_link）
   10 条错误码用例（plugin/error_codes.yaml → diagnose_error）
   5 条关系用例（relations/*.bkn 的源对象 → resolve_relation）
@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT))
 
 from plugin.constants import SYMPTOM_ALIASES  # noqa: E402
 
-OUT = ROOT / "evals" / "cases" / "ontology_qa_45.jsonl"
+OUT = ROOT / "evals" / "cases" / "ontology_qa_50.jsonl"
 
 
 def symptom_cases(n: int = 20) -> list:
