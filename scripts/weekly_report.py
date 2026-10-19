@@ -36,10 +36,18 @@ def main() -> int:
     ap.add_argument("--days", type=int, default=7)
     ap.add_argument("--out", default="")
     a = ap.parse_args()
-    since = (datetime.date.today() - datetime.timedelta(days=a.days - 1)).isoformat()
-    usage = [d for d in _lines(["logs/usage_log_*.jsonl"]) if str(d.get("ts", 0))]
-    traj = list(_lines(["logs/trajectories/*.jsonl"]))
-    gaps = list(_lines(["logs/gap_log_*.jsonl"]))
+    since_date = datetime.date.today() - datetime.timedelta(days=a.days - 1)
+    since = since_date.isoformat()
+    since_ts = int(datetime.datetime.combine(since_date, datetime.time(0, 0)).timestamp())
+    def _in_range(d):
+        ts = d.get("ts") or d.get("timestamp") or 0
+        try:
+            return int(ts) >= since_ts
+        except Exception:
+            return False
+    usage = [d for d in _lines(["logs/usage_log_*.jsonl"]) if _in_range(d)]
+    traj = [d for d in _lines(["logs/trajectories/*.jsonl"]) if _in_range(d)]
+    gaps = [d for d in _lines(["logs/gap_log_*.jsonl"]) if _in_range(d)]
     tools = collections.Counter(d.get("tool") for d in usage if d.get("tool"))
     real = {str(d.get("task_id")) for d in usage if d.get("task_id")}
     sources = collections.Counter()

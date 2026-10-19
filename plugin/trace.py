@@ -6,7 +6,8 @@
 做法：`tool_execution` middleware 包一层，**只观测不改结果**：
   * 按工具名分类来源层（bkn_graph / bkn_code / bkn_summary / retrieval / other）；
   * 记 `chars`（体积）与 `ms`（耗时），供 43 号 D 系列与 77 号评测复用；
-  * 已自行记录的两个 handler **跳过**，避免重复计数。
+  * 已自行记录的两个 handler **跳过**，避免重复计数；
+  * 只统计本插件 15 个工具（C-20261018-18：外部工具不入 answer_source，避免 D12 口径被污染）。
 """
 from __future__ import annotations
 
@@ -30,6 +31,9 @@ _LAYER = {
 }
 _ALREADY = frozenset({"diagnose_error", "diagnose_db_link"})
 
+# C-20261018-18：只观测本插件 15 个工具；外部工具（exec_shell/terminal/...）不进 answer_source
+_BKN_TOOLS = frozenset({"query_product", "explain_architecture", "design_solution", "check_compatibility", "list_scenarios", "diagnose_error", "get_prerequisites", "resolve_relation", "resolve_operation", "search_qdrant", "diagnose_db_link", "check_action_risk", "diagnose_mechanism", "bkn_ask", "check_plan"})
+
 
 def classify(tool_name: str) -> str:
     return _LAYER.get(tool_name, "other")
@@ -40,7 +44,7 @@ def tool_execution_middleware(*, tool_name: str, args: dict, next_call, **kwargs
     t0 = time.perf_counter()
     result = next_call(args)
     try:
-        if tool_name not in _ALREADY:
+        if tool_name in _BKN_TOOLS and tool_name not in _ALREADY:
             text = result if isinstance(result, str) else str(result)
             _append({"event": "answer_source", "ts": int(time.time()),
                      "task_id": str(kwargs.get("task_id") or "")[:48],

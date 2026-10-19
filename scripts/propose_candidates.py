@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT))
 
 
 def _gaps(days: int):
+    since_ts = int((datetime.datetime.now() - datetime.timedelta(days=days)).timestamp())
     rows = []
     for f in sorted(ROOT.glob("logs/gap_log_*.jsonl")):
         try:
@@ -27,7 +28,13 @@ def _gaps(days: int):
             day = None
         for ln in f.read_text(encoding="utf-8", errors="ignore").splitlines():
             try:
-                rows.append(json.loads(ln))
+                item = json.loads(ln)
+            except Exception:
+                continue
+            ts = item.get("ts") or item.get("timestamp") or 0
+            try:
+                if int(ts) >= since_ts:
+                    rows.append(item)
             except Exception:
                 continue
     return rows

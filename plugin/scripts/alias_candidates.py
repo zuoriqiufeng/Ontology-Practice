@@ -80,7 +80,8 @@ def _scan(since: str, until: str) -> tuple[Counter, Counter]:
                 if k:
                     mentions[k] += 1
                     reasons["mention_unknown"] += 1
-            for item in d.get("dropped") or []:
+            dropped = d.get("dropped")
+            for item in (dropped if isinstance(dropped, list) else []):
                 if not isinstance(item, dict):
                     continue
                 k = _norm(item.get("id"))
