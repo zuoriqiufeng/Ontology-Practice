@@ -119,6 +119,7 @@ BKN 生成 / 新建本体 / 设计知识网络 / 把文档变成 BKN / 生成 bk
 | 一句话问答（先摘要） | `bkn_ask`（≤600 字，detail=ref 取全文） |
 | 结构关系/影响面 | `resolve_relation` |
 | 执行前核对前置 | `check_plan`（只读） |
+| 错误码（产品码/数据库码） | `bkn_ask`（按来源分流：产品码→diagnose_error；DB 原生码→DB 诊断） |
 | 其它 12 个工具 | 见 `doc/build/demo-product-bkn/31-tools.md` |
 
 ## References

@@ -64,7 +64,7 @@ demo-product-bkn plugin 有两层不同调用路径：
 
 | 类型 | 数量 | 调用方式 | 例子 |
 |------|:--:|---------|------|
-| **BKN Tool**（查询/自查类） | 13 | **直接调用** | `design_solution`, `diagnose_error`, `check_action_risk` |
+| **BKN Tool**（查询/自查类） | 15 | **直接调用** | `design_solution`, `diagnose_error`, `check_action_risk` |
 | **Operational Skill**（操作类） | 7 | `resolve_operation` → `skill_view` | `demo-product-rule-manager` |
 
 ---
@@ -79,7 +79,7 @@ demo-product-bkn plugin 有两层不同调用路径：
                             constraints/risks 从 relations 提取到顶层)
 4. check_compatibility    → 兼容性检查 (支持 source_version/target_version)
 5. list_scenarios         → 场景列表 (keywords 规范化: str→[str], 非 list→[])
-6. diagnose_error         → 错误诊断 (规范化顶层 error_code + diagnosis)
+6. diagnose_error         → Demo Product 产品码诊断 (规范化顶层 error_code + diagnosis；不确定码来源先 bkn_ask)
 7. get_prerequisites      → 前置条件 (规范化顶层 operation + prerequisites; 未命中返回 available 列表)
 8. resolve_relation       → 关联查询 (relation_type 默认 all; target_hint 过滤)
 9. resolve_operation      → 操作解析 → Skill 映射 (implements 带 skill: 前缀; implements_skills 多 Skill

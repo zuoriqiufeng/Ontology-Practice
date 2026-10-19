@@ -47,6 +47,7 @@ tools_used:
 - **用途**：把「谁依赖谁 / 影响面 / 传递链 / 关联」翻成 resolve_relation 的标准调用，并如实标注边界
 - **结构出口**：resolve_relation(source_entity, relation_type, direction, depth)（唯一结构出口）
 - **摘要入口**：先 bkn_ask(question) 拿摘要（≤600 字：answer/evidence/skills/open），要细节再 detail=ref
+- **错误码入口**：码一律先 bkn_ask（自动分来源：产品码→diagnose_error；数据库原生码 ORA-/TNS-/SQLSTATE/1062…→DB 诊断；来源不明先要库类型/日志文本）
 - **机制出口**：diagnose_mechanism(entry, observations, max_candidates)——候选 ＋ 判据命中 ＋ 证据缺口
 - **计划核对**：执行前用 check_plan(steps, states) 查状态前置/禁止序列（只读）
 - **排障接力出口**：resolve_relation(relation_type="diagnosis_path")——症状/码 → suspected_in → 进程 → Skill → 取证日志（单跳一次拿全）
