@@ -30,7 +30,7 @@ def _route(q: str):
         return tool, args, info
     for alias in sorted(SYMPTOM_ALIASES, key=len, reverse=True):
         if alias and alias in q:
-            return ("diagnose_db_link", {"symptom": alias},
+            return ("diagnose_db_link", {"symptom": SYMPTOM_ALIASES[alias]},
                     {"origin": "symptom", "vendor": "", "ambiguous": False, "rule": "symptom_alias", "confidence": "medium"})
     return None, {}, {"origin": "unknown", "vendor": "", "ambiguous": False, "rule": "", "confidence": "low"}
 
