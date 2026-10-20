@@ -132,7 +132,12 @@ def _summarize(tool: str, raw: str, meta: dict) -> dict:
 
 
 def _record(meta: dict, q: str, out: str, raw: str, tool) -> None:
-    """非产品码 → 记一条 foreign_code 缺口（进入缺口→候选闭环，不进本体）。"""
+    """非产品码 → 记一条 foreign_code 缺口（进入缺口→候选闭环，不进本体）。
+
+    只在**确实定位到码**时记录；没有码的普通问题不写 foreign_code（C-20261020-01：修误报）。
+    """
+    if not meta.get("code_detected"):
+        return
     origin = meta.get("origin")
     if origin in ("product", "symptom"):
         return
