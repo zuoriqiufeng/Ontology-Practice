@@ -10,12 +10,58 @@ from __future__ import annotations
 
 import json
 import re
+import time
 
 from .code_origin import classify, route as route_code
 from .constants import SYMPTOM_ALIASES
 
 _CODE = re.compile(r"(?<![A-Za-z0-9])((?:[A-Za-z]{1,8}[-_]?)?[0-9]{3,5})(?![0-9])")
 _NO_TOOL = {"answer": "", "evidence": [], "skills": [], "open": []}
+
+_CACHE = {}
+_CACHE_TTL = 600
+_CACHE_MAX = 64
+
+
+def display_symptom(sid: str) -> str:
+    """规范症状 ID → 首个中文别名（找不到回退原 ID）；只用于展示，evidence 仍保留 ID。"""
+    for alias, canonical in SYMPTOM_ALIASES.items():
+        if canonical == sid:
+            return alias
+    return sid
+
+
+def _first_cause(d: dict) -> str:
+    """从 db_link 的 knowledge_context 里取第一条常见原因，压到 160 字。"""
+    kc = d.get("knowledge_context") or {}
+    raw = kc.get("common_causes") or kc.get("recommended_steps") or ""
+    items = raw
+    if isinstance(raw, str):
+        try:
+            items = json.loads(raw)
+        except Exception:  # noqa: BLE001
+            items = []
+    for it in items or []:
+        if isinstance(it, dict):
+            c = it.get("content") or it.get("preview") or ""
+        else:
+            c = str(it)
+        if c:
+            return str(c).strip()[:160]
+    return ""
+
+
+def _cache_get(key):
+    item = _CACHE.get(key)
+    if item and time.time() - item["ts"] < _CACHE_TTL:
+        return item["out"]
+    return None
+
+
+def _cache_put(key, out: str) -> None:
+    if len(_CACHE) >= _CACHE_MAX:
+        _CACHE.clear()
+    _CACHE[key] = {"ts": time.time(), "out": out}
 
 
 def _route(q: str):
@@ -40,6 +86,15 @@ def ask(args, **kwargs):
     _init()
     q = str(args.get("question") or "").strip()
     detail = str(args.get("detail") or "summary").strip().lower()
+    cache_key = (kwargs.get("task_id"), q, detail)
+    if detail not in ("ref", "full", "all"):
+        cached = _cache_get(cache_key)
+        if cached is not None:
+            _log_exempt_call("bkn_ask", args, kwargs, cached, cached,
+                             usage_fields={"route": "cache", "detail": detail, "cache_hit": True,
+                                            "summary_chars": len(cached), "raw_chars": 0},
+                             assess=False, confidence="partial")
+            return cached
     tool, sub, meta = _route(q)
     raw = ""
     if tool is None:
@@ -54,10 +109,12 @@ def ask(args, **kwargs):
             payload["ref"] = "detail=ref 取全文"
             out = json.dumps(_trim(payload, 600), ensure_ascii=False)
     _record(meta, q, out, raw, tool)
+    if detail not in ("ref", "full", "all"):
+        _cache_put(cache_key, out)
     _log_exempt_call("bkn_ask", args, kwargs, raw or out, out,
                      usage_fields={"route": tool or "none", "detail": detail,
                                     "code_origin": meta.get("origin"), "ambiguous": meta.get("ambiguous"),
-                                    "delegated_to": tool or "none",
+                                    "delegated_to": tool or "none", "cache_hit": False,
                                     "summary_chars": len(out), "raw_chars": len(raw),
                                     "compression": round(len(raw) / max(len(out), 1), 2) if raw else None},
                      assess=False, confidence=_confidence(meta))
@@ -118,15 +175,25 @@ def _summarize(tool: str, raw: str, meta: dict) -> dict:
         vendor = meta.get("vendor") or d.get("db_type") or ""
         evidence = [x for x in [d.get("error_code") or d.get("symptom"), vendor, nav.get("primary")]
                     if x and str(x).lower() not in ("unknown", "none", "")]
+        sym = str(d.get("symptom") or "")
+        sym_name = display_symptom(sym) if origin == "symptom" else sym
+        snippet = _first_cause(d)
         if origin in ("oracle", "mysql", "postgres", "db2", "sqlserver"):
             answer = ("该码是 %s 原生错误码（非 Demo Product 产品码）：本体只给排查落点与 Skill，"
                       "含义以 DB 文档/Skill 为准。" % vendor)
             open_ = ["需要精确含义时加载推荐 Skill（详情用 detail=ref）"]
+            next_ = {}
+            sufficient = False
         else:
             answer = str(summary)[:200]
-            open_ = ["细节（常见原因/步骤/配置检查/日志）用 detail=ref 取"]
+            if sym and sym_name != sym:
+                answer = answer.replace(sym, sym_name)
+            sufficient = bool(snippet) or bool(skills)
+            next_ = {"query": "%s 常见原因 排查步骤" % (sym_name or "该症状"), "top_k": 3}
+            open_ = [] if sufficient else ["还缺具体细节：可 search_qdrant(compact=true, top_k=3) 一次"]
         return {"answer": answer, "evidence": evidence[:3], "skills": skills[:3], "open": open_[:2],
-                "code_origin": origin, "confidence": _confidence(meta)}
+                "code_origin": origin, "confidence": _confidence(meta),
+                "symptom_name": sym_name, "snippet": snippet, "next": next_, "sufficient": sufficient}
     return {"answer": str(raw)[:300], "evidence": [], "skills": [], "open": [],
             "code_origin": origin, "confidence": _confidence(meta)}
 

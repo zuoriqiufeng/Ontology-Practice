@@ -170,8 +170,13 @@ SCHEMAS = [
                 },
                 "top_k": {
                     "type": "integer",
-                    "description": "返回结果条数（默认 5，最大 20）",
+                    "description": "返回结果条数（默认 5，最大 20；compact 模式默认 3）",
                     "default": 5
+                },
+                "compact": {
+                    "type": "boolean",
+                    "description": "可选：只取要点（输出压到 ≤1200 字符，建议 top_k=3）；需要完整片段时不要传",
+                    "default": False
                 },
                 "collection": {
                     "type": "string",

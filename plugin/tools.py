@@ -126,7 +126,46 @@ def _json_len(obj):
         return None
 
 
-def _apply_output_budget(result, tool_name):
+def _compact_search_result(data, max_chars=1200):
+    """检索结果的紧凑裁剪：每段 ≤120 字、每个列表 ≤3 项，总量 ≤max_chars。
+
+    不用 `_enforce_budget`：它按条丢弃，会把 hits 整段砍光（实测只剩 63 字），
+    这里按字段截断，保证至少保留前几条摘要。
+    """
+    def _cut(values):
+        if isinstance(values, list):
+            return [_cut(v) for v in values[:3]]
+        if isinstance(values, dict):
+            # 命中项只留 content/score/source（其余 blurb/title/hit_mini 等对「先看一眼」无用）
+            if "content" in values and ("score" in values or "source" in values):
+                return {
+                    "content": str(values.get("content") or "")[:120],
+                    "score": values.get("score"),
+                    "source": str(values.get("source") or "")[:60],
+                }
+            out = {}
+            for k, v in values.items():
+                if isinstance(v, str) and k in ("content", "preview", "text", "snippet"):
+                    out[k] = v[:120] + ("…" if len(v) > 120 else "")
+                else:
+                    out[k] = _cut(v)
+            return out
+        return values
+    compact = _cut(data)
+    if isinstance(compact, dict) and isinstance(compact.get("hits"), list) and not compact["hits"]:
+        return compact
+    text = __import__("json").dumps(compact, ensure_ascii=False)
+    if len(text) > max_chars and isinstance(compact, dict):
+        for k in list(compact):
+            if k in ("query", "hits", "results", "mode"):
+                continue
+            compact.pop(k, None)
+    if isinstance(compact, dict):
+        compact["_compact"] = True
+    return compact
+
+
+def _apply_output_budget(result, tool_name, limit=None):
     """给豁免 `_wrap()` 的 Tool 挂统一输出上限 (v3.9)。
 
     `search_qdrant` / `diagnose_db_link` / `check_action_risk` 的返回契约（原始
@@ -138,19 +177,20 @@ def _apply_output_budget(result, tool_name):
     所以本函数的默认行为是 no-op。
     """
     from .config import TOOLS_OUTPUT_MAX_CHARS
-    if TOOLS_OUTPUT_MAX_CHARS <= 0 or not isinstance(result, dict):
+    budget = int(limit or TOOLS_OUTPUT_MAX_CHARS)
+    if budget <= 0 or not isinstance(result, dict):
         return result
     _init()
     # B2（44 号 §3.3`budget_trim`）：裁剪前后各量一次体积，只进 trajectory 流，不改返回体。
     before_chars = _json_len(result)
-    result, truncated = _loader._enforce_budget(result, TOOLS_OUTPUT_MAX_CHARS)
+    result, truncated = _loader._enforce_budget(result, budget)
     if truncated:
         after_chars = _json_len(result)  # 紧跟裁剪后量取（此时尚未加 `_budget_note`）
         result["_budget_note"] = (
-            f"输出超预算 {TOOLS_OUTPUT_MAX_CHARS} 字符，已按优先级截断"
+            f"输出超预算 {budget} 字符，已按优先级截断"
         )
         from .observability import track
-        _fields = {"tool": tool_name, "max_chars": TOOLS_OUTPUT_MAX_CHARS}
+        _fields = {"tool": tool_name, "max_chars": budget}
         if before_chars is not None:
             _fields["before_chars"] = before_chars
         if after_chars is not None:
@@ -1125,14 +1165,14 @@ def search_qdrant_handler(args, **kwargs):
             # 44 号 §6 批 3：call_detail 也要 args——本函数作用域内**没有** args（只有
             # normalized 后的 queries_spec），故由 handler 原样透传
             args=args))
-        final = json.dumps(_apply_output_budget(raw, "search_qdrant"), ensure_ascii=False)
+        final = json.dumps(_apply_output_budget(_compact_search_result(raw, 1200) if args.get("compact") else raw, "search_qdrant"), ensure_ascii=False)
         # 批 4-2：统一埋点（置信度 + usage + 轨迹）；逐条 usage 记录仍由 batch_inner 负责
         _log_exempt_call("search_qdrant", args, kwargs, raw, final,
                          {"mode": "parallel_batch", "queries": raw.get("query_count", 0)})
         return final
 
     query = args.get("query", "")
-    top_k = args.get("top_k", 5)
+    top_k = args.get("top_k", 3 if args.get("compact") else 5)
     try:
         top_k = int(top_k)
         if top_k < 1:
@@ -1384,7 +1424,7 @@ def search_qdrant_handler(args, **kwargs):
         })
 
     result = _filter_command_fields(result)
-    final = json.dumps(_apply_output_budget(result, "search_qdrant"), ensure_ascii=False)
+    final = json.dumps(_apply_output_budget(_compact_search_result(result, 1200) if args.get("compact") else result, "search_qdrant"), ensure_ascii=False)
     _log_exempt_call("search_qdrant", args, kwargs, result, final,
                      {"chunk_mode": chunk_mode, "top_k": top_k,
                       "hits": result.get("count", 0), "mode": "single",
