@@ -236,6 +236,14 @@ SEARCH_BM25_FALLBACK_SCORE = SEARCH.get("bm25_fallback_score", 0.1)
 SEARCH_BM25_PRECISION_GUARD = SEARCH.get("bm25_precision_guard", True)
 
 # Chunk-aware search (v3.6)
+# 84 号：码行确定性通道（0=关闭，退回旧 dense/BM25 路径）
+EXACT_CODE_LOOKUP = os.environ.get("EXACT_CODE_LOOKUP", "1") not in ("0", "false", "False")
+#: 码行交付的行文本上限（超长以命中位置切窗）
+CODE_ROW_MAX_CHARS = _as_int(os.environ.get("CODE_ROW_MAX_CHARS", "400"), 400)
+#: 单码最多保留的行引用数（超出丢弃，防内存膨胀）
+CODE_ROWS_MAX = _as_int(os.environ.get("CODE_ROWS_MAX", "20"), 20)
+
+
 SEARCH_CHUNK_MODE = os.environ.get("SEARCH_CHUNK_MODE", SEARCH.get("chunk_mode", "mini_first"))
 MINI_FIRST_TOP_K_MULTIPLIER = _as_int(
     os.environ.get("MINI_FIRST_TOP_K_MULTIPLIER", SEARCH.get("mini_first_top_k_multiplier", 2)), 2

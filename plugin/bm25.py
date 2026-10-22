@@ -250,7 +250,19 @@ def _build_index(client, collection: str) -> "BM25Scorer | None":
             if term.startswith('-') and term[1:].isdigit():
                 exact_index[term[1:]].add(doc_id)
     index._exact_index = dict(exact_index)
+    # 84 号：码行倒排（同一批 content_cache，零 embedding；构建失败不影响检索）
+    try:
+        from .code_rows import CodeRowIndex
+        index._code_index = CodeRowIndex.build(content_cache)
+    except Exception:  # noqa: BLE001
+        index._code_index = None
     return index
+
+
+def get_code_index(collection: str = None):
+    """→ 码行索引（与 BM25 索引同生命周期）；索引不可用返回 None。"""
+    idx = get_bm25_index(collection)
+    return getattr(idx, "_code_index", None) if idx else None
 
 
 def get_bm25_index(collection: str = None) -> "BM25Scorer | None":

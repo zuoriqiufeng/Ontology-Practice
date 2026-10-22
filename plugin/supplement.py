@@ -1262,11 +1262,9 @@ def _extract_exact_terms(query: str) -> list[str]:
 
     v3.4.1: 仅匹配负号 4 位数字 (-4002) 和 ORA-XXXXX。
     普通 4 位数字 (端口/年份/参数) 不触发, 避免噪声。"""
-    terms = []
-    for pattern, _ in _EXACT_TERM_PATTERNS:
-        matches = re.findall(pattern, query, re.IGNORECASE)
-        terms.extend(matches)
-    return list(set(terms))
+    # 84 号：由 code_rows 驱动（支持裸码/5 位/ORA|YAS 前缀 + 侧车校验 + 上下文放行）。
+    from .code_rows import extract_code_mentions
+    return [m["canonical"] for m in extract_code_mentions(query)]
 
 
 def _any_hit_contains_term(hits: list[dict], terms: list[str]) -> bool:
@@ -1276,8 +1274,14 @@ def _any_hit_contains_term(hits: list[dict], terms: list[str]) -> bool:
     for h in hits:
         content = h.get("content", "")
         for term in terms:
-            if term in content:
-                return True
+            variants = {term}
+            if term.startswith("-") and term[1:].isdigit():
+                variants.add(term[1:])
+            for v in variants:
+                # 边界感知：14017 / 40170 不得命中 4017
+                if re.search(r"(?<![0-9A-Za-z_-])" + re.escape(v) + r"(?![0-9])",
+                             content, re.IGNORECASE):
+                    return True
     return False
 
 
@@ -1436,6 +1440,15 @@ def search_qdrant(query: str, top_k: int = None, hybrid: bool = True,
         top_k = SEARCH_TOP_K
     if collection is None:
         collection = QDRANT_COLLECTION
+
+    # ── 84 号：码行确定性通道（有码先取行，命中即短路；无码/无行不改变原路径） ──
+    from .code_rows import code_rows_for_query
+    _t_code = time.perf_counter()
+    code_hits, _code_mentions = code_rows_for_query(query, top_k=top_k, collection=collection)
+    if code_hits:
+        _path_add("code_rows", code_hits, t0=_t_code, stopped="hit_enough")
+        _path_exit(_pc, _ptok, code_hits)
+        return code_hits
     client = _get_qdrant_client()
     model = _get_embedding_model()
 

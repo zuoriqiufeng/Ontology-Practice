@@ -138,11 +138,16 @@ def _compact_search_result(data, max_chars=1200):
         if isinstance(values, dict):
             # 命中项只留 content/score/source（其余 blurb/title/hit_mini 等对「先看一眼」无用）
             if "content" in values and ("score" in values or "source" in values):
-                return {
+                hit = {
                     "content": str(values.get("content") or "")[:120],
                     "score": values.get("score"),
                     "source": str(values.get("source") or "")[:60],
                 }
+                # 84 号：码行 compact 也保留可读定位字段
+                for _k in ("exact_code", "table_header", "exact_verified", "chunk_level"):
+                    if _k in values:
+                        hit[_k] = values[_k]
+                return hit
             out = {}
             for k, v in values.items():
                 if isinstance(v, str) and k in ("content", "preview", "text", "snippet"):
@@ -1142,6 +1147,29 @@ def resolve_operation(args, **kwargs):
 
 # ========== Tool 10: search_qdrant ==========
 
+from .code_rows import code_rows_for_query  # 84 号：码行确定性通道
+
+
+def _window_content(content: str, query: str, limit: int = 500) -> str:
+    """P4（84 号）：长块按查询词切窗交付，替代「从头截 500 字」。
+
+    短内容原样返回；长块优先围绕查询关键词取窗（关键词前保留 1/5 上下文），
+    找不到关键词时退回头部截断——比盲截更不容易把答案切掉。
+    """
+    if not content or len(content) <= limit:
+        return content
+    tokens = __import__("re").findall(r"[A-Za-z0-9_]{2,}|[\u4e00-\u9fff]{2,}", query or "")
+    pos = -1
+    for tok in sorted(set(tokens), key=len, reverse=True):
+        pos = content.find(tok)
+        if pos >= 0:
+            break
+    if pos < 0:
+        return content[:limit]
+    left = max(0, pos - limit // 5)
+    return content[left:left + limit]
+
+
 def search_qdrant_handler(args, **kwargs):
     """Hermes 原生 Qdrant 搜索工具 — 维度感知 + 覆盖度追踪
 
@@ -1223,9 +1251,15 @@ def search_qdrant_handler(args, **kwargs):
         return final
 
     result = {}
+    code_hits = []
     try:
+        # ── 路径0: 码行确定性通道（84 号）——有码先取行，命中即短路 ──
+        # 裸码/带前缀码也走这里；无命中才回落 dense/BM25。
+        code_hits, _code_mentions = code_rows_for_query(query, top_k=top_k, collection=collection)
+        if code_hits:
+            raw_hits = code_hits
         # ── 路径1: 自定义 collection — v1.7 起支持 BM25 + chunk_mode（按设计稿分块结构） ──
-        if collection:
+        elif collection:
             from .config import SEARCH_SCORE_THRESHOLD
             from .supplement import _get_qdrant_client, _get_embedding_model
 
@@ -1342,7 +1376,7 @@ def search_qdrant_handler(args, **kwargs):
         hits = []
         for h in raw_hits:
             h_out = {
-                "content": h.get("content", "")[:500],
+                "content": _window_content(h.get("content", ""), query, 500),
                 "score": h.get("score", 0),
                 "source": h.get("source", ""),
             }
@@ -1373,6 +1407,10 @@ def search_qdrant_handler(args, **kwargs):
             # 21 号 2F: 检索来源路径（替代此前拼进 source 的 [RRF]/[PG] 标记）
             if h.get("retrieval_path"):
                 h_out["retrieval_path"] = h["retrieval_path"]
+            # 84 号：码行字段透传（content 已被截到 500，行文本本身 ≤400）
+            for _k in ("exact_code", "exact_raw", "exact_verified", "table_header", "offset"):
+                if _k in h:
+                    h_out[_k] = h[_k]
             # 日志模式库 payload 字段透传（v1.7，log_patterns_collection）
             from .bm25 import PATTERN_META_KEYS
             for _f in PATTERN_META_KEYS:
@@ -1428,6 +1466,7 @@ def search_qdrant_handler(args, **kwargs):
     _log_exempt_call("search_qdrant", args, kwargs, result, final,
                      {"chunk_mode": chunk_mode, "top_k": top_k,
                       "hits": result.get("count", 0), "mode": "single",
+                      "code_rows": len(code_hits),
                       "query": (query or "")[:120]})  # 21 号 P2 零命中治理需要「什么查询」
     return final
 
@@ -1488,7 +1527,12 @@ def _search_qdrant_batch_inner(queries_spec, task_id=None, session_id=None,
         try:
             mode = nq.get("chunk_mode", SEARCH_CHUNK_MODE)
             coll = nq.get("collection")
-            if mode == "mini_first":
+            # 84 号：码行通道优先（批量与单查同口径）
+            _code_hits, _code_mentions = code_rows_for_query(
+                nq["query"], top_k=nq["top_k"], collection=coll)
+            if _code_hits:
+                raw = _code_hits
+            elif mode == "mini_first":
                 raw = _search_mini_first(nq["query"], top_k=nq["top_k"], collection=coll)
             elif mode == "parent_expand":
                 raw = search_qdrant(nq["query"], top_k=nq["top_k"], hybrid=True, collection=coll)
@@ -1505,7 +1549,7 @@ def _search_qdrant_batch_inner(queries_spec, task_id=None, session_id=None,
             hits = []
             for h in raw:
                 hit = {
-                    "content": h.get("content", "")[:500],
+                    "content": _window_content(h.get("content", ""), nq["query"], 500),
                     "score": h.get("score", 0),
                     "source": h.get("source", ""),
                 }
