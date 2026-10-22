@@ -48,8 +48,9 @@ def detect(text: str):
 def build_block(kind: str, target: str, limit: int = LIMIT) -> str:
     """生成注入块：码不内置码表（码＝入口）；症状给「先查本体」的指路。"""
     if kind == "code":
-        return ("错误码 %s：先调 bkn_ask（它会按码来源分流：Demo Product 产品码→diagnose_error；" % target
-                + "数据库原生码→DB 诊断）。不要直接调 diagnose_error，也不要凭记忆答码义。")[:limit]
+        return ("错误码 %s：先判来源——产品码（-NNNN 或侧车命中的 4-5 位数字码）→ diagnose_error；" % target
+                + "数据库原生码（ORA-/TNS-/SQLSTATE…）或来源不确定 → bkn_ask（按来源分流）。"
+                + "码义以工具返回为准，不凭记忆作答。")[:limit]
     return ("症状「%s」：先查本体，再取证。" % target
             + chr(10)
             + "下一步：调 bkn_ask（question=「%s」）取 recommended_skills / log_navigation；细节用 detail=ref。" % target)[:limit]
