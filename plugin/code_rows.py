@@ -111,6 +111,27 @@ def _row_text(content: str, start: int, end: int) -> tuple[str, str]:
     return _table_header(content, ls), line
 
 
+_SIDECAR: dict | None = None
+
+
+def _sidecar_meaning(canonical: str) -> str:
+    """侧车（error_codes.yaml）里的中文释义；缺表/缺键返回空串。"""
+    global _SIDECAR
+    if _SIDECAR is None:
+        try:
+            from .resolver import _load_error_codes
+            _SIDECAR = _load_error_codes() or {}
+        except Exception:  # noqa: BLE001
+            _SIDECAR = {}
+    entry = (_SIDECAR.get(canonical) or _SIDECAR.get(canonical.lstrip("-"))
+             or _SIDECAR.get(canonical.replace("-", "")) or {})
+    for key in ("zh", "meaning", "en"):
+        value = str(entry.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
 def _keys(canonical: str, raw: str) -> set[str]:
     """码的所有可检索键（带横杠/不带横杠两种形态）。"""
     keys = {canonical, canonical.replace("-", "")}
@@ -210,6 +231,7 @@ class CodeRowIndex:
     def lookup(self, mentions: list[dict], top_k: int = 5) -> list[dict]:
         hits: list[dict] = []
         seen: set[tuple] = set()
+        seen_text: set[str] = set()
         for ment in mentions:
             canonical = ment["canonical"]
             refs = list(self.posting.get(canonical, []))
@@ -221,7 +243,8 @@ class CodeRowIndex:
                     continue
                 seen.add(key)
                 hit = self._render(ref, ment)
-                if hit:
+                if hit and hit["content"] not in seen_text:
+                    seen_text.add(hit["content"])
                     hits.append(hit)
                 if len(hits) >= top_k:
                     return hits
@@ -236,6 +259,9 @@ class CodeRowIndex:
         if not line:
             return None
         text = (header + "\n" + line) if header else line
+        meaning = _sidecar_meaning(ment["canonical"])
+        if meaning and meaning not in text:
+            text = text + " — " + meaning
         return {
             "id": f"{doc_id}:{start}",
             "content": text[:600],
@@ -245,6 +271,7 @@ class CodeRowIndex:
             "exact_code": ment["canonical"],
             "exact_raw": ment.get("raw", ""),
             "exact_verified": bool(ment.get("verified")),
+            "exact_meaning": meaning,
             "table_header": header,
             "offset": start,
             "_exact_match": True,
