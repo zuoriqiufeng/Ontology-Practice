@@ -22,7 +22,7 @@ WHITELIST = [
     "scripts",
     "skill/bkn*",
 ]
-EXCLUDE = {"plugin/skill_manifest.yaml", "plugin/config.yaml"}
+EXCLUDE = {"plugin/skill_manifest.yaml", "plugin/config.yaml", "scripts/check_pitfalls.py"}
 #: OSS 侧手工改写过、不再接受同步覆盖的文件（改这里要同步在 MAINTAINING.md 记一行）
 LOCAL_OVERRIDES = {"skill/bkn-intake/references/preprocessing.md"}
 SKIP_PARTS = {"__pycache__", ".pytest_cache", ".git", "node_modules", "logs"}
