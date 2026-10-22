@@ -1257,9 +1257,11 @@ def search_qdrant_handler(args, **kwargs):
         # ── 码行通道（84 号补）：只作补充，不独占窗口 ──
         # 精确码行最多 CODE_ROWS_INLINE 条，其余坑位仍由 chunk_mode 指定的主路径产出；
         # 显式 chunk_mode（large_only 等）因此仍按用户要求取块粒度。
+        # 裁 2（实测）：k>=3 保持 ≤2；k=2 时 1 码 + 1 语义（2 码 0 语义实测更差）；k=1 纯码行
+        _code_cap = min(CODE_ROWS_INLINE, max(0, top_k - 1))
         code_hits, _code_mentions = code_rows_for_query(
-            query, top_k=min(top_k, CODE_ROWS_INLINE), collection=collection)
-        code_hits = code_hits[:CODE_ROWS_INLINE]   # 硬上限：任何实现都不得独占窗口
+            query, top_k=_code_cap, collection=collection)
+        code_hits = code_hits[:_code_cap]
         # ── 路径1: 自定义 collection — v1.7 起支持 BM25 + chunk_mode（按设计稿分块结构） ──
         if collection:
             from .config import SEARCH_SCORE_THRESHOLD
@@ -1534,9 +1536,11 @@ def _search_qdrant_batch_inner(queries_spec, task_id=None, session_id=None,
             mode = nq.get("chunk_mode", SEARCH_CHUNK_MODE)
             coll = nq.get("collection")
             # 84 号补：码行只作补充（批量与单查同口径）
+            _k = nq["top_k"]
+            _code_cap = min(CODE_ROWS_INLINE, max(0, _k - 1))
             _code_hits, _code_mentions = code_rows_for_query(
-                nq["query"], top_k=min(nq["top_k"], CODE_ROWS_INLINE), collection=coll)
-            _code_hits = _code_hits[:CODE_ROWS_INLINE]
+                nq["query"], top_k=_code_cap, collection=coll)
+            _code_hits = _code_hits[:_code_cap]
             if mode == "mini_first":
                 raw = _search_mini_first(nq["query"], top_k=nq["top_k"], collection=coll)
             elif mode == "parent_expand":

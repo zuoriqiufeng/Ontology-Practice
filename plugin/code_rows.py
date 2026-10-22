@@ -275,7 +275,9 @@ class CodeRowIndex:
         return {
             "id": f"{doc_id}:{start}",
             "content": text[:600],
-            "score": 1.0,
+            # 84 号补（裁 1-B）：不是相似度，但也不再是 1.0——避免被读成「完全相关」，
+            # 同时保证仍排在 dense/BM25 命中之前。
+            "score": 0.95 if ment.get("verified") else 0.90,
             "source": doc_id,
             "chunk_level": "code_row",
             "exact_code": ment["canonical"],
