@@ -267,6 +267,12 @@ RISK_GUARD_BLOCK = os.environ.get(
 ).lower() == "true"
 
 # Tool 输出总量预算 (v1.5): 0=无限制(默认); >0 时按优先级截断
+# 85 号（往返优化 P3）：bkn_ask 摘要不足时附 enrichment（top 向量命中，独立预算，不影响 ≤600 字摘要）
+ASK_ENRICH = _as_int(os.environ.get("ASK_ENRICH", "1"), 1)
+ASK_ENRICH_TOPK = _as_int(os.environ.get("ASK_ENRICH_TOPK", "2"), 2)
+ASK_ENRICH_MIN_SCORE = _as_float(os.environ.get("ASK_ENRICH_MIN_SCORE", "0.35"), 0.35)
+ASK_ENRICH_CHARS = _as_int(os.environ.get("ASK_ENRICH_CHARS", "600"), 600)
+
 SEARCH_OUTPUT_MAX_CHARS = _as_int(
     os.environ.get("SEARCH_OUTPUT_MAX_CHARS", SEARCH.get("output_max_chars", 0)), 0
 )

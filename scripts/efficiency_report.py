@@ -47,6 +47,18 @@ def main():
             if t == "bkn_ask" and i + 1 < len(tools) and tools[i + 1] == "search_qdrant":
                 after += 1
     n_ask = sum(1 for d in calls if d.get("tool") == "bkn_ask")
+    # 85 号：M10 相邻对分布 / M11 单任务调用次数 / P3 enrichment 采用率
+    pairs = collections.Counter()
+    for v in sessions.values():
+        tools = [d.get("tool") for d in v]
+        for a, b in zip(tools, tools[1:]):
+            pairs[(a, b)] += 1
+    top_pairs = pairs.most_common(5)
+    counts = sorted(per_session)
+    p90 = counts[min(len(counts) - 1, int(round(0.9 * (len(counts) - 1))))] if counts else 0
+    heavy = sum(1 for c in counts if c > 30)
+    enrich_calls = sum(1 for d in calls if d.get("enrich"))
+    enrich_chars = sum(int(d.get("enrich_chars") or 0) for d in calls)
     durs = [int(d.get("duration_ms") or 0) for d in calls if d.get("duration_ms")]
     rows = [
         ("真实会话数", len(sessions)),
@@ -59,6 +71,11 @@ def main():
         ("其中 search_qdrant chars", qd_chars),
         ("tokens 代理（chars/2.5）", round(total_chars / 2.5)),
         ("延迟 p50 / p95（ms）", "%d / %d" % (round(statistics.median(durs)), max(durs)) if durs else "-"),
+        ("M10 search_qdrant→search_qdrant", pairs.get(("search_qdrant", "search_qdrant"), 0)),
+        ("M10 相邻对 Top5", "；".join("%s→%s %d" % (a, b, n) for (a, b), n in top_pairs) or "-"),
+        ("M11 单任务调用 中位/P90/max", "%s / %s / %s" % (statistics.median(counts) if counts else 0, p90, counts[-1] if counts else 0)),
+        ("M11 >30 次任务数", heavy),
+        ("P3 enrichment（次数/字数）", "%d / %d" % (enrich_calls, enrich_chars)),
     ]
     lines = ["# 效率基线（真实会话 %d 个）" % len(sessions), "", "| 指标 | 值 |", "|---|---|"]
     lines += ["| %s | %s |" % r for r in rows]

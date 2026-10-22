@@ -1952,6 +1952,41 @@ def check_action_risk_handler(args, **kwargs):
     """
     from .risk_guard import check_action_risk, get_risk_rules
 
+    # 85 号（往返优化 P4）：一次多条自查（动作互不依赖时省轮次）；单条路径保持不变
+    actions = args.get("actions")
+    if isinstance(actions, list) and actions:
+        items = []
+        for item in actions[:10]:
+            if not isinstance(item, dict):
+                continue
+            act = str(item.get("action") or "")
+            if not act:
+                continue
+            st = str(item.get("current_state") or "")
+            chk = check_action_risk(act, st)
+            items.append({
+                "passed": chk["passed"], "action": chk["action"], "state": chk["state"],
+                "rule_id": chk.get("rule_id"), "block_reason": chk.get("block_reason"),
+                "severity": chk.get("severity"), "error_code": chk.get("error_code"),
+                "risk_type": chk.get("risk_type"), "source": chk.get("source"),
+                "blockable": chk.get("blockable"),
+            })
+        if not items:
+            result = {"error": "actions 数组每项须含 action", "count": 0}
+            final = json.dumps(result, ensure_ascii=False)
+            _log_exempt_call("check_action_risk", args, kwargs, result, final,
+                             {"action": "batch", "passed": None, "count": 0})
+            return final
+        passed = all(x["passed"] for x in items)
+        result = {"passed": passed, "results": items, "count": len(items),
+                  "blocked_count": sum(1 for x in items if not x["passed"])}
+        if len(actions) > 10:
+            result["truncated"] = True
+        final = json.dumps(_apply_output_budget(result, "check_action_risk"), ensure_ascii=False)
+        _log_exempt_call("check_action_risk", args, kwargs, result, final,
+                         {"action": "batch", "passed": passed, "count": len(items)})
+        return final
+
     action = args.get("action", "")
     state = args.get("current_state", "")
 

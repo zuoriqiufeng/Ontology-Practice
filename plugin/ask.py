@@ -97,9 +97,14 @@ def ask(args, **kwargs):
             return cached
     tool, sub, meta = _route(q)
     raw = ""
+    enrich_items, enrich_err, enrich_top = [], "", 0.0
     if tool is None:
-        payload = _needs_payload(meta)
-        out = json.dumps(_trim(payload, 600), ensure_ascii=False)
+        payload = _trim(_needs_payload(meta), 600)
+        if detail not in ("ref", "full", "all") and _need_enrich(payload, tool):
+            enrich_items, enrich_err, enrich_top = _enrich(q)
+            if enrich_items:
+                payload["enrichment"] = enrich_items
+        out = json.dumps(payload, ensure_ascii=False)
     else:
         raw = HANDLERS[tool](sub)
         if detail in ("ref", "full", "all"):
@@ -107,7 +112,12 @@ def ask(args, **kwargs):
         else:
             payload = _summarize(tool, raw, meta)
             payload["ref"] = "detail=ref 取全文"
-            out = json.dumps(_trim(payload, 600), ensure_ascii=False)
+            payload = _trim(payload, 600)
+            if _need_enrich(payload, tool):
+                enrich_items, enrich_err, enrich_top = _enrich(q)
+                if enrich_items:
+                    payload["enrichment"] = enrich_items
+            out = json.dumps(payload, ensure_ascii=False)
     _record(meta, q, out, raw, tool)
     if detail not in ("ref", "full", "all"):
         _cache_put(cache_key, out)
@@ -116,7 +126,11 @@ def ask(args, **kwargs):
                                     "code_origin": meta.get("origin"), "ambiguous": meta.get("ambiguous"),
                                     "delegated_to": tool or "none", "cache_hit": False,
                                     "summary_chars": len(out), "raw_chars": len(raw),
-                                    "compression": round(len(raw) / max(len(out), 1), 2) if raw else None},
+                                    "compression": round(len(raw) / max(len(out), 1), 2) if raw else None,
+                                    "enrich": len(enrich_items),
+                                    "enrich_chars": sum(len(x["content"]) for x in enrich_items),
+                                    "enrich_top_score": round(enrich_top, 4) if enrich_top else None,
+                                    "enrich_error": enrich_err or None},
                      assess=False, confidence=_confidence(meta))
     return out
 
@@ -147,6 +161,66 @@ def _needs_payload(meta: dict) -> dict:
         need = ["给出错误码（含库类型更好），或换成已登记的症状说法"]
     return {"answer": answer, "evidence": evidence, "skills": [],
             "open": need, "code_origin": origin, "confidence": "partial"}
+
+
+def _need_enrich(payload: dict, tool) -> bool:
+    """摘要不足才附 enrichment。
+
+    不附：sufficient 显式 True（症状已有处置）或 confidence=full（产品码含义直出）。
+    要附：open 非空（DB 码缺 Skill 细节 / 症状缺证据）或路由 none（来源不明/未识别）。
+    """
+    if payload.get("sufficient") is True:
+        return False
+    if payload.get("confidence") == "full":
+        return False
+    if payload.get("open"):
+        return True
+    return tool is None
+
+
+def _enrich(query: str):
+    """检索 top 命中作为 enrichment；任何异常静默降级。
+
+    返回 (items, err, top_score)。预算由 config.ASK_ENRICH_CHARS 控制（只计 content），
+    不挤压 ≤600 字摘要（摘要先 _trim，再追加 enrichment 字段）。
+    """
+    from .config import ASK_ENRICH, ASK_ENRICH_TOPK, ASK_ENRICH_MIN_SCORE, ASK_ENRICH_CHARS
+    if not ASK_ENRICH or ASK_ENRICH_TOPK <= 0:
+        return [], "", 0.0
+    try:
+        from .supplement import search_qdrant as _search
+        hits = _search(query, top_k=ASK_ENRICH_TOPK, hybrid=True) or []
+    except Exception as exc:  # noqa: BLE001 - 降级：检索失败不影响主答案
+        return [], type(exc).__name__, 0.0
+    try:
+        from .tools import _window_content
+    except Exception:  # noqa: BLE001
+        _window_content = None
+    items = []
+    used = 0
+    top = 0.0
+    for h in hits:
+        try:
+            score = float(h.get("score") or 0.0)
+        except (TypeError, ValueError):
+            score = 0.0
+        top = max(top, score)
+        if score < ASK_ENRICH_MIN_SCORE:
+            continue
+        content = str(h.get("content") or "").strip()
+        if not content:
+            continue
+        if _window_content is not None:
+            content = _window_content(content, query, 280)
+        content = content[: max(0, ASK_ENRICH_CHARS - used)]
+        if not content:
+            break
+        used += len(content)
+        items.append({"content": content, "score": round(score, 4),
+                      "source": h.get("source", ""), "chunk_level": h.get("chunk_level", "")})
+        if len(items) >= ASK_ENRICH_TOPK:
+            break
+    return items, "", top
 
 
 def _summarize(tool: str, raw: str, meta: dict) -> dict:

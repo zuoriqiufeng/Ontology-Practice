@@ -1,5 +1,5 @@
 name: demo-product-bkn
-version: "1.7.1"
+version: "1.8.0"
 description: "Demo Product 业务知识网络查询引擎 — 15个Tool提供产品/架构/方案/兼容/运维/链路诊断全维度知识查询 + 维度感知向量搜索 + RiskGuard 风险护栏"
 author: info2soft
 kind: standalone
