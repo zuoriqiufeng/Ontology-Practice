@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 
-from .config import CODE_ROWS_MAX, CODE_ROW_MAX_CHARS, EXACT_CODE_LOOKUP
+from .config import CODE_ROWS_MAX, CODE_ROW_MAX_CHARS, CODE_ROW_WINDOW, EXACT_CODE_LOOKUP
 
 #: 数字码：允许带负号；4-5 位（-4217 / 4217 / 10928）
 CODE_RE = re.compile(r"(?<![0-9A-Za-z-])-?[0-9]{4,5}(?![0-9])")
@@ -88,16 +88,66 @@ def _segment_around(content: str, ls: int, le: int, start: int, end: int) -> tup
     if line.lstrip().startswith("|"):
         return ls, line.strip()
     seg_start = content.rfind("错误码", ls, start + 1)
-    if seg_start < 0:
-        seg_start = ls
     seg_end = le
     nxt = content.find("错误码", end)
-    if 0 <= nxt < le:
+    if seg_start < 0:
+        # 无「错误码」前缀的枚举（如 "-4016, -4017, -4018"）按逗号切，避免切出半句
+        seg_start = max(content.rfind(", ", ls, start + 1),
+                        content.rfind("，", ls, start + 1))
+        if seg_start < 0:
+            seg_start = ls
+        else:
+            seg_start += 1
+        nxt2 = min([i for i in (content.find(", ", end), content.find("，", end)) if i >= 0] or [-1])
+        if 0 <= nxt2 < le:
+            seg_end = nxt2
+    elif 0 <= nxt < le:
         seg_end = nxt
     seg = content[seg_start:seg_end].strip().strip(",，;；")
     if len(seg) < 8:
         return ls, line.strip()
     return seg_start, seg
+
+
+def _is_data_row(line: str) -> bool:
+    """管道分隔的表格行（不含表头分隔线 |---|---，也不把长段落误判成行）。
+
+    长段落里常出现「… | 说明」式的单个竖线；用长度/竖线数上限挡住，
+    否则整段 11k 的码表清单会被当成一行展开。
+    """
+    s = line.strip()
+    return (bool(s) and len(s) <= 300 and 2 <= s.count("|") <= 8
+            and set(s) - set("|-: ") != set())
+
+
+def _expand_rows(content: str, ls: int, le: int, span: int) -> list[str]:
+    """取命中行 ±span 条同表数据行（跳过空行，遇非数据行即停）。"""
+    if span <= 0 or not _is_data_row(content[ls:le]):
+        return []
+    lines = content.split("\n")
+    idx = content.count("\n", 0, ls)
+    picked = [lines[idx]]
+    i, got = idx - 1, 0
+    while i >= 0 and got < span:
+        if not lines[i].strip():
+            i -= 1
+            continue
+        if not _is_data_row(lines[i]):
+            break
+        picked.insert(0, lines[i])
+        got += 1
+        i -= 1
+    i, got = idx + 1, 0
+    while i < len(lines) and got < span:
+        if not lines[i].strip():
+            i += 1
+            continue
+        if not _is_data_row(lines[i]):
+            break
+        picked.append(lines[i])
+        got += 1
+        i += 1
+    return [row.rstrip() for row in picked]
 
 
 def _row_text(content: str, start: int, end: int) -> tuple[str, str]:
@@ -249,7 +299,8 @@ class CodeRowIndex:
                     if hit:
                         rendered.append(hit)
             # 语料里同一码可能有「映射枚举行」和「表格式说明行」，先按信息量排
-            rendered.sort(key=lambda h: -len(h["content"]))
+            rendered.sort(key=lambda h: (0 if "|" in (h["content"] or "").split("\n")[0] else 1,
+                                          -len(h["content"])))
             seen_text: set[str] = set()
             for hit in rendered:
                 if hit["content"] in seen_text:
@@ -265,7 +316,12 @@ class CodeRowIndex:
         content = self.cache.get(doc_id) or ""
         if not content:
             return None
-        header, line = _row_text(content, start, end)
+        ls, le = _line_span(content, start)
+        rows = _expand_rows(content, ls, le, CODE_ROW_WINDOW)
+        if rows:
+            header, line = _table_header(content, ls), "\n".join(rows)
+        else:
+            header, line = _row_text(content, start, end)
         if not line:
             return None
         text = (header + "\n" + line) if header else line

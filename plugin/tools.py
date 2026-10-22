@@ -1475,6 +1475,7 @@ def search_qdrant_handler(args, **kwargs):
                      {"chunk_mode": chunk_mode, "top_k": top_k,
                       "hits": result.get("count", 0), "mode": "single",
                       "code_rows": len(code_hits),
+                      "code_row_chars": sum(len(h.get("content") or "") for h in code_hits),
                       "query": (query or "")[:120]})  # 21 号 P2 零命中治理需要「什么查询」
     return final
 

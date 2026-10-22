@@ -244,6 +244,8 @@ CODE_ROW_MAX_CHARS = _as_int(os.environ.get("CODE_ROW_MAX_CHARS", "400"), 400)
 CODE_ROWS_MAX = _as_int(os.environ.get("CODE_ROWS_MAX", "20"), 20)
 # 84 号补：一次返回里最多几条码行（其余坑位留给语义块，避免精确码独占窗口）
 CODE_ROWS_INLINE = _as_int(os.environ.get("CODE_ROWS_INLINE", "2"), 2)
+# 84 号补（T）：码行携带的同表邻行数（0 = 只给命中行；只对「管道分隔的数据行」生效）
+CODE_ROW_WINDOW = _as_int(os.environ.get("CODE_ROW_WINDOW", "2"), 2)
 
 
 SEARCH_CHUNK_MODE = os.environ.get("SEARCH_CHUNK_MODE", SEARCH.get("chunk_mode", "mini_first"))
