@@ -229,23 +229,33 @@ class CodeRowIndex:
         return cls(posting, content_cache or {}, complete)
 
     def lookup(self, mentions: list[dict], top_k: int = 5) -> list[dict]:
+        """码 → 行。同一码的带/不带负号两个键合并，富文本优先，同文去重。"""
         hits: list[dict] = []
         seen: set[tuple] = set()
-        seen_text: set[str] = set()
         for ment in mentions:
             canonical = ment["canonical"]
-            refs = list(self.posting.get(canonical, []))
-            if not refs:
-                refs = list(self.posting.get(canonical.replace("-", ""), []))
-            for ref in refs:
-                key = (ref[0], ref[1])
-                if key in seen:
+            keys = [canonical]
+            bare = canonical.replace("-", "")
+            if bare != canonical:
+                keys.append(bare)
+            rendered: list[dict] = []
+            for key in keys:
+                for ref in self.posting.get(key, []):
+                    ref_key = (ref[0], ref[1])
+                    if ref_key in seen:
+                        continue
+                    seen.add(ref_key)
+                    hit = self._render(ref, ment)
+                    if hit:
+                        rendered.append(hit)
+            # 语料里同一码可能有「映射枚举行」和「表格式说明行」，先按信息量排
+            rendered.sort(key=lambda h: -len(h["content"]))
+            seen_text: set[str] = set()
+            for hit in rendered:
+                if hit["content"] in seen_text:
                     continue
-                seen.add(key)
-                hit = self._render(ref, ment)
-                if hit and hit["content"] not in seen_text:
-                    seen_text.add(hit["content"])
-                    hits.append(hit)
+                seen_text.add(hit["content"])
+                hits.append(hit)
                 if len(hits) >= top_k:
                     return hits
         return hits
