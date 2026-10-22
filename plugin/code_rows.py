@@ -289,6 +289,21 @@ class CodeRowIndex:
         }
 
 
+def blend_code_rows(code_hits: list[dict], base_hits: list[dict], top_k: int) -> list[dict]:
+    """码行 + 语义块混合交付：码行在前，按 (来源, 内容前 80 字) 去重，总量 ≤ top_k。"""
+    out: list[dict] = []
+    seen: set[tuple] = set()
+    for hit in list(code_hits) + list(base_hits):
+        key = (str(hit.get("source") or ""), (hit.get("content") or "")[:80])
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(hit)
+        if len(out) >= top_k:
+            break
+    return out
+
+
 def code_rows_for_query(query: str, top_k: int = 5,
                         collection: str | None = None) -> tuple[list[dict], list[dict]]:
     """查询 → (码行命中, 提及列表)。开关关闭或无码时返回 ([], [])。"""

@@ -1441,14 +1441,6 @@ def search_qdrant(query: str, top_k: int = None, hybrid: bool = True,
     if collection is None:
         collection = QDRANT_COLLECTION
 
-    # ── 84 号：码行确定性通道（有码先取行，命中即短路；无码/无行不改变原路径） ──
-    from .code_rows import code_rows_for_query
-    _t_code = time.perf_counter()
-    code_hits, _code_mentions = code_rows_for_query(query, top_k=top_k, collection=collection)
-    if code_hits:
-        _path_add("code_rows", code_hits, t0=_t_code, stopped="hit_enough")
-        _path_exit(_pc, _ptok, code_hits)
-        return code_hits
     client = _get_qdrant_client()
     model = _get_embedding_model()
 

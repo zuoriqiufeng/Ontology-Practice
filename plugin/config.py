@@ -242,6 +242,8 @@ EXACT_CODE_LOOKUP = os.environ.get("EXACT_CODE_LOOKUP", "1") not in ("0", "false
 CODE_ROW_MAX_CHARS = _as_int(os.environ.get("CODE_ROW_MAX_CHARS", "400"), 400)
 #: 单码最多保留的行引用数（超出丢弃，防内存膨胀）
 CODE_ROWS_MAX = _as_int(os.environ.get("CODE_ROWS_MAX", "20"), 20)
+# 84 号补：一次返回里最多几条码行（其余坑位留给语义块，避免精确码独占窗口）
+CODE_ROWS_INLINE = _as_int(os.environ.get("CODE_ROWS_INLINE", "2"), 2)
 
 
 SEARCH_CHUNK_MODE = os.environ.get("SEARCH_CHUNK_MODE", SEARCH.get("chunk_mode", "mini_first"))

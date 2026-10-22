@@ -1147,7 +1147,8 @@ def resolve_operation(args, **kwargs):
 
 # ========== Tool 10: search_qdrant ==========
 
-from .code_rows import code_rows_for_query  # 84 号：码行确定性通道
+from .code_rows import blend_code_rows, code_rows_for_query  # 84 号：码行确定性通道
+from .config import CODE_ROWS_INLINE
 
 
 def _window_content(content: str, query: str, limit: int = 500) -> str:
@@ -1253,13 +1254,14 @@ def search_qdrant_handler(args, **kwargs):
     result = {}
     code_hits = []
     try:
-        # ── 路径0: 码行确定性通道（84 号）——有码先取行，命中即短路 ──
-        # 裸码/带前缀码也走这里；无命中才回落 dense/BM25。
-        code_hits, _code_mentions = code_rows_for_query(query, top_k=top_k, collection=collection)
-        if code_hits:
-            raw_hits = code_hits
+        # ── 码行通道（84 号补）：只作补充，不独占窗口 ──
+        # 精确码行最多 CODE_ROWS_INLINE 条，其余坑位仍由 chunk_mode 指定的主路径产出；
+        # 显式 chunk_mode（large_only 等）因此仍按用户要求取块粒度。
+        code_hits, _code_mentions = code_rows_for_query(
+            query, top_k=min(top_k, CODE_ROWS_INLINE), collection=collection)
+        code_hits = code_hits[:CODE_ROWS_INLINE]   # 硬上限：任何实现都不得独占窗口
         # ── 路径1: 自定义 collection — v1.7 起支持 BM25 + chunk_mode（按设计稿分块结构） ──
-        elif collection:
+        if collection:
             from .config import SEARCH_SCORE_THRESHOLD
             from .supplement import _get_qdrant_client, _get_embedding_model
 
@@ -1422,6 +1424,10 @@ def search_qdrant_handler(args, **kwargs):
                 h_out["_fallback_reason"] = h["_fallback_reason"]
             hits.append(h_out)
 
+        # 84 号补：码行在前、语义块在后（同来源同文去重），总量仍 ≤ top_k
+        if code_hits:
+            hits = blend_code_rows(code_hits, hits, top_k)
+
         # 收集初始化/降级警告, 让上层知道结果是否可靠
         from .supplement import get_search_warnings
         from .bm25 import get_bm25_warnings
@@ -1527,12 +1533,11 @@ def _search_qdrant_batch_inner(queries_spec, task_id=None, session_id=None,
         try:
             mode = nq.get("chunk_mode", SEARCH_CHUNK_MODE)
             coll = nq.get("collection")
-            # 84 号：码行通道优先（批量与单查同口径）
+            # 84 号补：码行只作补充（批量与单查同口径）
             _code_hits, _code_mentions = code_rows_for_query(
-                nq["query"], top_k=nq["top_k"], collection=coll)
-            if _code_hits:
-                raw = _code_hits
-            elif mode == "mini_first":
+                nq["query"], top_k=min(nq["top_k"], CODE_ROWS_INLINE), collection=coll)
+            _code_hits = _code_hits[:CODE_ROWS_INLINE]
+            if mode == "mini_first":
                 raw = _search_mini_first(nq["query"], top_k=nq["top_k"], collection=coll)
             elif mode == "parent_expand":
                 raw = search_qdrant(nq["query"], top_k=nq["top_k"], hybrid=True, collection=coll)
@@ -1584,6 +1589,9 @@ def _search_qdrant_batch_inner(queries_spec, task_id=None, session_id=None,
                 if h.get("_fallback_reason"):
                     hit["_fallback_reason"] = h["_fallback_reason"]
                 hits.append(hit)
+            # 84 号补：码行在前、语义块在后（批量同口径）
+            if _code_hits:
+                hits = blend_code_rows(_code_hits, hits, nq["top_k"])
             return {"idx": nq["idx"], "query": nq["query"], "dimension": nq["dimension"],
                     "chunk_mode": mode, "hits": hits, "count": len(hits), "error": None}
         except Exception as e:
