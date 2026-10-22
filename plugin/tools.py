@@ -1426,7 +1426,7 @@ def search_qdrant_handler(args, **kwargs):
 
         # 84 号补：码行在前、语义块在后（同来源同文去重），总量仍 ≤ top_k
         if code_hits:
-            hits = blend_code_rows(code_hits, hits, top_k)
+            hits = blend_code_rows(code_hits, hits, top_k, _code_mentions)
 
         # 收集初始化/降级警告, 让上层知道结果是否可靠
         from .supplement import get_search_warnings
@@ -1591,7 +1591,7 @@ def _search_qdrant_batch_inner(queries_spec, task_id=None, session_id=None,
                 hits.append(hit)
             # 84 号补：码行在前、语义块在后（批量同口径）
             if _code_hits:
-                hits = blend_code_rows(_code_hits, hits, nq["top_k"])
+                hits = blend_code_rows(_code_hits, hits, nq["top_k"], _code_mentions)
             return {"idx": nq["idx"], "query": nq["query"], "dimension": nq["dimension"],
                     "chunk_mode": mode, "hits": hits, "count": len(hits), "error": None}
         except Exception as e:

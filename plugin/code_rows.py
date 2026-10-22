@@ -289,8 +289,25 @@ class CodeRowIndex:
         }
 
 
-def blend_code_rows(code_hits: list[dict], base_hits: list[dict], top_k: int) -> list[dict]:
-    """码行 + 语义块混合交付：码行在前，按 (来源, 内容前 80 字) 去重，总量 ≤ top_k。"""
+def blend_code_rows(code_hits: list[dict], base_hits: list[dict], top_k: int,
+                    mentions: list[dict] | None = None) -> list[dict]:
+    """码行 + 语义块混合交付：码行在前，语义块里「含该码的行」优先。
+
+    去重口径 (来源, 内容前 80 字)；总量 ≤ top_k。base_hits 内部重排不改变其相关性
+    排序，只把真正含目标码的行提到前面（mini_first 下 dense 排序常把这些行压后）。
+    """
+    if mentions:
+        codes = set()
+        for ment in mentions:
+            canonical = str(ment.get("canonical") or "")
+            if canonical:
+                codes.add(canonical)
+                codes.add(canonical.lstrip("-"))
+        def _rank(hit: dict) -> int:
+            text = hit.get("content") or ""
+            return 0 if any(c and c in text for c in codes) else 1
+        code_hits = list(code_hits)
+        base_hits = sorted(base_hits, key=_rank)   # 稳定排序，同档保持原序
     out: list[dict] = []
     seen: set[tuple] = set()
     for hit in list(code_hits) + list(base_hits):
