@@ -10,6 +10,8 @@
 #   ④ 基线门禁   measure_confidence --compare    置信度/输出体积不劣化
 #   ⑤ 回放门禁   m5_case_replay --check           **不许更差**（floor＝scripts/m5_replay_floor.json；
 #                                                   2026-10-13 用户裁定「1 B」接线）
+#   ⑥ 坑台账     check_pitfalls.py                 doc/optimize/00-pitfalls.md 格式合法
+#                                                   （2026-10-22 用户要求「踩过的坑要记录」）
 #
 # 用法:
 #   bash scripts/gate.sh              # 全跑（约 1-2 分钟，含 measurement）
@@ -177,6 +179,20 @@ if "$PY" scripts/m5_case_replay.py --check; then
   RESULTS+=("✅ ⑤ 回放 floor 无退步")
 else
   RESULTS+=("❌ ⑤ 回放 floor 出现退步（见上）")
+  FAILED=1
+fi
+
+# ---- ⑥ 踩坑台账格式（2026-10-22）------------------------------------------
+# 目的：坑不记就会再踩。只校验格式（编号唯一递增、七列非空），内容靠评审。
+hr
+echo "⑥ 踩坑台账：check_pitfalls.py"
+if [ ! -f "$REPO_ROOT/scripts/check_pitfalls.py" ]; then
+  echo "  跳过（无台账脚本）"
+  RESULTS+=("✅ ⑥ 坑台账跳过（无脚本）")
+elif "$PY" scripts/check_pitfalls.py; then
+  RESULTS+=("✅ ⑥ 坑台账格式合法")
+else
+  RESULTS+=("❌ ⑥ 坑台账格式不合法（见上）")
   FAILED=1
 fi
 
