@@ -14,7 +14,7 @@ import time
 
 from .code_origin import classify, route as route_code
 from .constants import SYMPTOM_ALIASES
-from .ask_router import attach_intents, extract_all, resolve_intent, router_enabled
+from .ask_router import attach_intents, extract_all, log_route_trace, resolve_intent, router_enabled
 
 _CODE = re.compile(r"(?<![A-Za-z0-9])((?:[A-Za-z]{1,8}[-_]?)?[0-9]{3,5})(?![0-9])")
 _NO_TOOL = {"answer": "", "evidence": [], "skills": [], "open": []}
@@ -102,6 +102,7 @@ def ask(args, **kwargs):
     if router_enabled():
         _sigs = extract_all(q)
         _primary = resolve_intent(q, signals=_sigs)
+        log_route_trace(q, _sigs, _primary)
         if _primary is not None:
             _shadow_note(q, _primary, meta)
             tool, sub, meta = _primary

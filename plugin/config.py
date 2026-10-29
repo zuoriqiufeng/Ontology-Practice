@@ -307,6 +307,10 @@ LOG_ROTATE_BACKUPS = _as_int(
 LOG_ROTATE_RETENTION_DAYS = _as_int(
     os.environ.get("LOG_ROTATE_RETENTION_DAYS", LOG_ROTATE.get("retention_days", 0)), 0
 )
+LOG_ROTATE_ROUTE_TRACE_MAX_BYTES = _as_int(
+    os.environ.get("LOG_ROTATE_ROUTE_TRACE_MAX_BYTES", LOG_ROTATE.get("route_trace_max_bytes", 262144)),
+    262144,
+)
 
 # 日志输出目录 (2A): 路径语义照抄 BKN_ROOT 先例——绝对路径/~ 开头直接用（expanduser），
 # 相对值锚定仓库根（plugin 的上级，与历史默认 <repo>/logs 一致）。env: LOG_DIR。

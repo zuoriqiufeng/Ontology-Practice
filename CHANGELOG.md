@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.0a0-sync — 2026-10-29（追加）
+- 开放入口路由决策 trace 日志（route_trace_log）：启用时逐条记录抽取到的信号快照 + 命中主意图 route_id/tool/origin；纯增量、确定性、不影响主输出。随 plugin/ask_router.py、plugin/ask.py、plugin/config.py 同步。
+
 ## 0.1.0a0-sync — 2026-10-29
 - 同步开放入口路由（Open-Entry Router）P1-P5：新增 plugin/ask_router.py（信号抽取框架 + 意图路由 resolve_intent + 聚合答案层 attach_intents）、plugin/entry_signal.yaml（信号注册表）、plugin/intent_routes.yaml（数据驱动路由表）；ask() 前置 _route_v2（默认关闭，影子跑）。
 - 行为影响：否。ask_router.enabled 默认 false，关闭态输出与接入前逐字节一致；启用时新增 intents / alt_intents 全意图呈现（dominant-first + 备选方向一句话）。

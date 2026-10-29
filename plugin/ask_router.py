@@ -411,7 +411,9 @@ def resolve_intent(text, *, db_hint="", log_source="", signals=None):
             continue
         args = _build_args(route, sig, text)
         code = sig.canonical if sig.kind == "error_code" else ""
-        return (tool, args, _meta(tool, sig, code))
+        meta = _meta(tool, sig, code)
+        meta["route"] = route.get("id")
+        return (tool, args, meta)
     return None
 
 
@@ -482,5 +484,46 @@ def attach_intents(payload: dict, sigs: list, primary) -> None:
                         "direction": _DIRECTION.get(s.kind, "备选分析方向")})
         if alt:
             payload["alt_intents"] = alt
+    except Exception:
+        return
+
+
+def log_route_trace(question, sigs, primary) -> None:
+    """落一条路由决策 trace（确定性、纯增量，不影响主输出，守 54 号 C）。
+
+    仅在 ask_router 启用时调用；记录：抽取到的信号快照 + 命中主意图(route_id/tool/origin)。
+    写入 logs/route_trace_log.jsonl（daily + 大小双维轮转，与 usage/gap 一致）。
+    任何异常静默——trace 不得影响主流程。
+    """
+    try:
+        import json
+        import time
+        from .config import (LOG_ROTATE_BACKUPS, LOG_ROTATE_ROUTE_TRACE_MAX_BYTES, resolve_log_path)
+        from .log_rotate import rotate_day_file
+        path = rotate_day_file(
+            resolve_log_path("route_trace_log.jsonl"),
+            LOG_ROTATE_ROUTE_TRACE_MAX_BYTES, LOG_ROTATE_BACKUPS,
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        entry = {
+            "timestamp": int(time.time()),
+            "question": (question or "")[:120],
+            "n_signals": len(sigs or []),
+            "intents": [
+                {"kind": s.kind, "entry": s.canonical or s.raw, "vendor": s.vendor,
+                 "confidence": s.confidence, "source": s.source_rule}
+                for s in (sigs or [])
+            ],
+            "primary": None,
+        }
+        if primary is not None:
+            entry["primary"] = {
+                "tool": primary[0], "args": primary[1],
+                "route": (primary[2] or {}).get("route"),
+                "origin": (primary[2] or {}).get("origin"),
+                "confidence": (primary[2] or {}).get("confidence"),
+            }
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     except Exception:
         return
