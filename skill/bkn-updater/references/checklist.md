@@ -35,7 +35,7 @@ name: bkn-updater
 6. 前置条件（批 2-1 派生模型，**不再往 prerequisites.bkn 加逐 action 段**）：**约束类** → `bkn/risks/constraints.bkn` 登记表加约束ID 行（**4 列，无关联列；只登记动作级**）+ `bkn/relations/action_routing.bkn` 补 constrained_by 边（25 号：不补边 = lint 警告 + risk_guard 不装配；全局/对象级约束进「全局约束」KV 段）；**非约束类业务前置** → 写进负责 Skill 的 `SKILL.md`
 7. 危险操作（dangerous: true）额外：`bkn/risks/constraints.bkn` 加约束ID + `action_routing.bkn` 加 constrained_by / risks_of 边（**不刷新段计数**——HIGH/MEDIUM 条数等计数按 P-B 原则已移除）
 8. **诊断域登记项（23 号方案，涉及诊断内容时必须同步）**：
-   - 新增错误码/症状 → `bkn/relations/process_topology.bkn` 补 `suspected_in`（或 `has_class`）边 + `plugin/constants.py` 别名常量（26 号：BKN 不建清单）；完整属性查库（`store:log_patterns_collection#错误码`）；
+   - 新增错误码/症状 → `bkn/relations/process_topology.bkn` 补 `suspected_in`（或 `has_class`）边 + `plugin/constants.py` 别名常量（26 号：BKN 不建清单）；完整属性查库（`store:demo-product_collection#错误码 → store:log_patterns_collection#错误码`）；
    - 新增库 → `plugin/constants.py::KNOWN_DBS`/`DB_ALIASES` 登记 + `objects/database.bkn` 加对象段 + `plugin/config.yaml` 核对连接参数；逐库检查点下延 `skill:demo-product-db-diagnostics/references/db-checkpoints.md`（**不进 BKN**）；
    - 扩维度（新增 `dimension:*`）→ **默认不做**，`dimension:unknown` + gap_log 反复证明才评审（`_check_namespace_registry_consistency` 有牙齿）
 9. 完成后跑 `python3 plugin/scripts/lint_bkn.py --error-only` 验 errors=0（再跑全量逐条判定 warning）；改 `.bkn` 后**重启服务进程**生效（`reload.py` 只重建执行它的短命进程的全局，常驻服务不生效）

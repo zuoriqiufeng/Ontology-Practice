@@ -14,6 +14,7 @@ import time
 
 from .code_origin import classify, route as route_code
 from .constants import SYMPTOM_ALIASES
+from .ask_router import attach_intents, extract_all, resolve_intent, router_enabled
 
 _CODE = re.compile(r"(?<![A-Za-z0-9])((?:[A-Za-z]{1,8}[-_]?)?[0-9]{3,5})(?![0-9])")
 _NO_TOOL = {"answer": "", "evidence": [], "skills": [], "open": []}
@@ -96,10 +97,20 @@ def ask(args, **kwargs):
                              assess=False, confidence="partial")
             return cached
     tool, sub, meta = _route(q)
+    _sigs = []
+    _primary = None
+    if router_enabled():
+        _sigs = extract_all(q)
+        _primary = resolve_intent(q, signals=_sigs)
+        if _primary is not None:
+            _shadow_note(q, _primary, meta)
+            tool, sub, meta = _primary
     raw = ""
     enrich_items, enrich_err, enrich_top = [], "", 0.0
     if tool is None:
         payload = _trim(_needs_payload(meta), 600)
+        if _sigs:
+            attach_intents(payload, _sigs, _primary)
         if detail not in ("ref", "full", "all") and _need_enrich(payload, tool):
             enrich_items, enrich_err, enrich_top = _enrich(q)
             if enrich_items:
@@ -113,6 +124,8 @@ def ask(args, **kwargs):
             payload = _summarize(tool, raw, meta)
             payload["ref"] = "detail=ref 取全文"
             payload = _trim(payload, 600)
+            if _sigs:
+                attach_intents(payload, _sigs, _primary)
             if _need_enrich(payload, tool):
                 enrich_items, enrich_err, enrich_top = _enrich(q)
                 if enrich_items:
@@ -125,6 +138,9 @@ def ask(args, **kwargs):
                      usage_fields={"route": tool or "none", "detail": detail,
                                     "code_origin": meta.get("origin"), "ambiguous": meta.get("ambiguous"),
                                     "delegated_to": tool or "none", "cache_hit": False,
+                                    "ask_router_enabled": bool(_sigs),
+                                    "ask_router_hit": _primary is not None,
+                                    "intents": len(_sigs),
                                     "summary_chars": len(out), "raw_chars": len(raw),
                                     "compression": round(len(raw) / max(len(out), 1), 2) if raw else None,
                                     "enrich": len(enrich_items),
@@ -270,6 +286,21 @@ def _summarize(tool: str, raw: str, meta: dict) -> dict:
                 "symptom_name": sym_name, "snippet": snippet, "next": next_, "sufficient": sufficient}
     return {"answer": str(raw)[:300], "evidence": [], "skills": [], "open": [],
             "code_origin": origin, "confidence": _confidence(meta)}
+
+
+def _shadow_note(q, v2, meta_v1) -> None:
+    """P2 影子对照：仅当 ask_router 启用且 v2 取了与 v1 不同的路径时记一条（供评估/回退）。"""
+    try:
+        origin_v2 = (v2[2] or {}).get("origin")
+        origin_v1 = (meta_v1 or {}).get("origin")
+        if origin_v2 == origin_v1:
+            return
+        from .supplement import log_gap
+        log_gap("bkn_ask_shadow", {"question": (q or "")[:120], "v1_origin": origin_v1,
+                                    "v2_tool": v2[0], "v2_origin": origin_v2},
+                "partial", ["ask_router_v2"])
+    except Exception:
+        pass
 
 
 def _record(meta: dict, q: str, out: str, raw: str, tool) -> None:

@@ -1,0 +1,64 @@
+# 开放入口：信号抽取器注册表（数据驱动；新增一类=加一段，不改代码）
+# 字段：id / kind / enabled / priority / confidence / fetch / note
+#   kind   —— 归一用（error_code / symptom / entity / operation / db_type / alarm / log_pattern / freetext）
+#   fetch  —— 指向 plugin/ask_router.py 的 _FETCHERS 内置实现
+#   confidence —— 该类的基准置信度（high/medium/low）
+# 裁定：Q1=方案A(regex 命中原生执行, freq 仅候选); Q3=延 P4(完整 Webhook); 见设计文档 §12。
+schema: 1
+signal_extractors:
+  - id: error_code
+    kind: error_code
+    enabled: true
+    priority: 10
+    confidence: high
+    fetch: error_code
+    note: 产品码→diagnose_error；DB 原生码(ORA-/SQLSTATE/…)→diagnose_db_link（复用 code_origin）
+  - id: symptom
+    kind: symptom
+    enabled: true
+    priority: 20
+    confidence: medium
+    fetch: symptom
+    note: SYMPTOM_ALIASES 现场说法命中（正则性日志动词识别延后 P4）
+  - id: entity
+    kind: entity
+    enabled: true
+    priority: 30
+    confidence: medium
+    fetch: entity
+    note: 进程/维度/场景提及（resolve_mention 族 + scenario 关键词）
+  - id: operation
+    kind: operation
+    enabled: true
+    priority: 40
+    confidence: medium
+    fetch: operation
+    note: lookup_operation 运维动作/别名（failover/start_rule/…）
+  - id: db_type
+    kind: db_type
+    enabled: true
+    priority: 50
+    confidence: medium
+    fetch: db_type
+    note: 库型词识别（oracle/mysql/pg/db2/sqlserver…）→ 供分流/参数补全
+  - id: alarm_simple
+    kind: alarm
+    enabled: true
+    priority: 60
+    confidence: medium
+    fetch: alarm_simple
+    note: Q3 裁定 P1 先兜「告警文本/JSON 已含错误码」；完整 Webhook 字段解析延后 P4
+  - id: log_pattern
+    kind: log_pattern
+    enabled: true
+    priority: 70
+    confidence: low
+    fetch: log_pattern
+    note: Q1 裁定 P4：regex 命中才执行；频次仅候选不驱动（守 54 号 C）
+  - id: freetext
+    kind: freetext
+    enabled: true
+    priority: 80
+    confidence: low
+    fetch: freetext
+    note: P4：疑问/描述句法分类，仅作文类提示，不单独驱动工具

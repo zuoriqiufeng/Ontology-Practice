@@ -51,7 +51,7 @@ B-域答"产品是什么、怎么用"，O-域答"怎么交付、怎么运行、�
 > |---|---|---|
 > | 值数据（版本表/对照矩阵/命令/参数/阈值/方案优势） | **Skill references** | `{migration_designer_skill}/references/compatibility.md` |
 > | 路由/规则表（场景匹配、Skill 归属） | **Tool 常量 / manifest** | `plugin/resolver.py::_SCENARIO_ROUTING_RULES`、`plugin/skill_manifest.yaml` |
-> | 全量知识/长尾案例/完整定义 | **Qdrant 检索** | `store:log_patterns_collection#错误码` |
+> | 全量知识/长尾案例/完整定义 | **Qdrant 检索** | `store:demo-product_collection#错误码 → store:log_patterns_collection#错误码` |
 > | 叙述/原理/历史记录 | **`doc/`** | `doc/build/demo-product-bkn/23-*.md` |
 > 下延后**本体只留一行值委托指针**，绝不复制内容。
 >

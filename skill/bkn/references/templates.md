@@ -322,7 +322,7 @@ metadata:
   （`ERROR_ALIASES` / `SYMPTOM_ALIASES`，与 `DB_ALIASES` 同层）；机械变体由代码派生。
 - **指引（执行层）**：四步诊断指引（归一→定位→取证→兜底）在 `{log_analyzer_skill}`；码含义按**日志消息文本**命中 `plugin/error_semantics.yaml` 的 8 个 `dimension:*` 语义类别（查不到 → `dimension:unknown`，不猜），语义类别权威见 `bkn/objects/dimensions.bkn`——
   归一 → 定位（边）→ 取证（进程属性 + 检索源）→ 兜底（`dimension:unknown` + gap_log）。
-- **完整定义**：查库（`store:log_patterns_collection#错误码`），任何时候不入 BKN。
+- **完整定义**：查库（`store:demo-product_collection#错误码 → store:log_patterns_collection#错误码`），任何时候不入 BKN。
 - **lint 牙齿**：别名常量里出现边上没有的 ID → error（`_check_alias_constants`）。
 
 跨切面（无法定位单进程）→ `has_class` 边指向 `dimension:*`。归不进任何维度 → `dimension:unknown` + gap_log。

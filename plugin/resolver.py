@@ -1231,6 +1231,25 @@ class BKNResolver:
             meaning = _official_meaning_for(clean_code, conflicts)
             meaning_source = "code"
         dim = meaning["dimension"]
+        # 【码义兜底】语义规则未命中（dimension:unknown）且是产品码（-NNNN）时，
+        # 从**本地码表侧车**（error_codes.yaml，主库错误码定义）确定性取中文义（84 号侧车）。
+        # 取本地产物而非 Qdrant 码行：保证 diagnose_error 输出字节级稳定（54 号 C），
+        # 也不依赖索引构建/集合状态；异常/缺表静默回退原 unknown，不放大故障。
+        if dim == "dimension:unknown":
+            try:
+                from .code_rows import normalize_code, _sidecar_meaning
+                _norm = normalize_code(clean_code or "")
+                if re.fullmatch(r"-[0-9]{4,5}", _norm or ""):
+                    _zh = _sidecar_meaning(_norm)
+                    if _zh:
+                        meaning.setdefault("semantic_rule", meaning.get("rule", ""))
+                        meaning["rule"] = "code_row_exact"
+                        meaning["exact_code"] = _norm
+                        meaning["exact_meaning"] = _zh
+                        meaning["evidence"] = "主库码表精确命中（定义侧车 error_codes.yaml）"
+                        meaning_source = "qdrant_code_row"
+            except Exception:  # noqa: BLE001 —— 兜底失败不放大：维持原 unknown 返回
+                pass
         # P3：diagnose_error（真实流量第一热点）的**诊断轴**——拿到的维度是真实语义类别
         # 还是兜底的 dimension:unknown，是「本体到底接上没有」最直接的一条证据；
         # 紧邻它的 diagnosed_by / observed_in 两条边则给出「接上后走到了哪些 Skill/日志」。
@@ -1264,8 +1283,8 @@ class BKNResolver:
             "suspected_process": processes,
             "retrieval_guide": DIAG_RETRIEVAL_GUIDE,
             "aliases": aliases,
-            "unknown_rule": ("含义未识别或未给消息文本 → ①带消息文本重问 ②search_qdrant 检索模式库"
-                             "（store:log_patterns_collection）③记 gap_log 走缺口闭环"),
+            "unknown_rule": ("含义未识别或未给消息文本 → ①带消息文本重问 ②主库用产品码纯代号（-NNNN）直查"
+                             "（命中码表定义）③实战案例库（store:log_patterns_collection）查该码处置 ④仍无 → gap_log"),
             "needs": needs,
         }
 

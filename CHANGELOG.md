@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0a0-sync — 2026-10-29
+- 同步开放入口路由（Open-Entry Router）P1-P5：新增 plugin/ask_router.py（信号抽取框架 + 意图路由 resolve_intent + 聚合答案层 attach_intents）、plugin/entry_signal.yaml（信号注册表）、plugin/intent_routes.yaml（数据驱动路由表）；ask() 前置 _route_v2（默认关闭，影子跑）。
+- 行为影响：否。ask_router.enabled 默认 false，关闭态输出与接入前逐字节一致；启用时新增 intents / alt_intents 全意图呈现（dominant-first + 备选方向一句话）。
+- 产品 vendor 哨兵用非产品名常量 _PRODUCT_VENDOR=product，保证去产品化改写不撕裂 .py/.yaml 两处同一常量。
+
 ## 0.1.0a0 — v0.1.0-alpha
 
 - 首次从内部工程仓剥离出**绿名单**：本体骨架（`bkn/`）、运行时（`plugin/`）、7 个通用 `bkn-*` skill、治理脚本（`scripts/`）。

@@ -157,7 +157,14 @@ DIMENSION_ALIASES = {
 }
 
 # 诊断检索指引（一条规则，替代原锚点表逐行重复的「检索指引」列）
-DIAG_RETRIEVAL_GUIDE = "store:log_patterns_collection#错误码"
+# 32 号：码只作入口。诊断时先查**主库**（产品知识/官方定义；-NNNN 纯码可激活 code_row 精确通道，
+# 见 plugin/code_rows.py），再查**实战案例库**（log_patterns_collection）作第二站。
+# 保持短句（<80 字符）：diagnose_error 走 raw 不受 _fmt_scalar 截断，但短句避免将来 Toon 路径被截。
+DIAG_RETRIEVAL_GUIDE = "store:demo_product_collection#错误码 → store:log_patterns_collection#错误码"
+
+# 内部兜底检索源（D1 解耦，2026-10-29）：_evidence_collection / fallback_to_qdrant 打实战案例库；
+# 与 DIAG_RETRIEVAL_GUIDE（Agent 指引、主库优先）解耦，内部兜底语义不随手势变更。
+DIAG_EVIDENCE_COLLECTION = "store:log_patterns_collection#错误码"
 
 # ── 检索源单点表（38 号批 1：自 resolver.get_evidence_sources 的分支表收拢）──────
 # 口径与收敛前**逐字一致**（21/25 号接线不变）：源端进程（iatrack/iadumper/ialoader）

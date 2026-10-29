@@ -93,4 +93,4 @@ rules:
 #: 兜底（**不猜**）：以上都不命中 → 未归类；如实说明"含义未识别"，给检索与取证指引。
 fallback:
   dimension: dimension:unknown
-  guide: "含义未识别：① 带上该码的**日志消息文本**再问一次（语义规则按文本命中）；② 用 search_qdrant 检索模式库（store:log_patterns_collection）；③ 仍无结论 → 记 gap_log，走缺口闭环"
+  guide: "含义未识别：① 带上该码的**日志消息文本**再问一次（语义规则按文本命中）；② 产品码用纯代号（如 -3554）在**主库**（store:demo-product_collection）精确直查命中码表定义；③ 仍无 → 查实战案例库（store:log_patterns_collection）；④ 仍无结论 → 记 gap_log，走缺口闭环"

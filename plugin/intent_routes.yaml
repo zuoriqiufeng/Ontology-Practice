@@ -1,0 +1,35 @@
+# 意图路由表（数据驱动；新增场景=加一行，不改代码）。设计：open-entry-ontology-routing-design.md §3.3。
+# 字段：id / priority / tool / match / args / note
+#   match.kind     —— 命中信号类（error_code / symptom / operation / entity / db_type …）
+#   match.vendor    —— 要求 signal.vendor 精确等于（如产品码 vendor=product）
+#   match.vendor_not—— 要求 signal.vendor 存在且 != 该值（如 DB 原生码 vendor_not=product）
+#   match.trust / match.canonical —— 可选额外过滤
+#   args 取值占位：canonical / vendor / raw / text500（原文前 500，供 diagnose_db_link 的 message）
+# 取 dominant：按 priority 升序扫描，某路由恰命中 ≤1 个候选才采纳；>1 或多路由并存 → 回退 ask() 旧路由/needs（P-012/诚实：不猜）。
+# P2 启用 4 条核心诊断路由；entity/告警/日志等扩展路由在 P3-P4 追加（覆盖矩阵见设计 §5）。
+schema: 1
+routes:
+  - id: product_code
+    priority: 1
+    tool: diagnose_error
+    match: {kind: error_code, vendor: product}
+    args: {error_code: canonical}
+    note: 产品码 → diagnose_error（origin=product）
+  - id: vendor_code
+    priority: 1
+    tool: diagnose_db_link
+    match: {kind: error_code, vendor_not: product}
+    args: {error_code: canonical, db_type: vendor, message: text500}
+    note: DB 原生码 → diagnose_db_link（origin=vendor，附 message 便于规则二次判定）
+  - id: canonical_symptom
+    priority: 2
+    tool: diagnose_db_link
+    match: {kind: symptom, trust: alias}
+    args: {symptom: canonical}
+    note: 规范症状 → diagnose_db_link（origin=symptom）
+  - id: operation
+    priority: 3
+    tool: resolve_operation
+    match: {kind: operation}
+    args: {operation: canonical}
+    note: 运维操作 → resolve_operation（origin=operation）

@@ -2170,16 +2170,17 @@ def _resolve_collection(store_ref: str) -> str:
 def _evidence_collection(args: dict) -> str:
     """按 args 推导诊断检索源集合。
 
-    32 号（码只作入口）：**错误码的检索源就是模式库**——`DIAG_RETRIEVAL_GUIDE`
-    （`store:log_patterns_collection#错误码`）是常量规则，不再依赖"码 → 进程 → 证据源"这条边链
-    （码已退出本体）。症状仍走原链（症状 → 嫌疑进程 → 证据源）。
+    32 号（码只作入口）：**错误码的内部兜底检索源就是模式库**——`DIAG_EVIDENCE_COLLECTION`
+    （`store:log_patterns_collection#错误码`，实战案例）是常量规则，不再依赖"码 → 进程 → 证据源"这条边链
+    （码已退出本体）；与 `DIAG_RETRIEVAL_GUIDE`（Agent 指引、主库优先）解耦。
+    症状仍走原链（症状 → 嫌疑进程 → 证据源）。
     """
     try:
         from .resolver import BKNResolver
         from .config import BKN_ROOT
-        from .constants import DIAG_RETRIEVAL_GUIDE
+        from .constants import DIAG_EVIDENCE_COLLECTION
         if (args.get("error_code") or "").strip():
-            col = _resolve_collection(str(DIAG_RETRIEVAL_GUIDE).split("#")[0])
+            col = _resolve_collection(DIAG_EVIDENCE_COLLECTION)
             if col:
                 return col
         r = BKNResolver(bkn_root=BKN_ROOT)
