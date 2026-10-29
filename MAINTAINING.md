@@ -36,7 +36,7 @@
 3. `redact.py` 五类命中 **0**（产品名/厂商/内网 IP/邮箱/内部痕迹）；
 4. **内部引用扫描**：`doc/optimize/`、`/hdd/demo`、`doc/build/demo` 的新增命中为 0。
 
-已知债务（存量内部引用）记在 `tools/internal-refs-baseline.txt`（当前 **58 文件**）——闸门只对**新增**失败；
+已知债务（存量内部引用）记在 `tools/internal-refs-baseline.txt`（当前 **60 文件**）——闸门只对**新增**失败；
 燃尽规则：改到哪个文件就顺手清掉它的内部引用，并从基线删一行。
 
 ## 5. 执行步骤
