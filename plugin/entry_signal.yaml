@@ -1,6 +1,6 @@
 # 开放入口：信号抽取器注册表（数据驱动；新增一类=加一段，不改代码）
 # 字段：id / kind / enabled / priority / confidence / fetch / note
-#   kind   —— 归一用（error_code / symptom / entity / operation / db_type / alarm / log_pattern / freetext）
+#   kind   —— 归一用（error_code / symptom / entity / operation / db_type / alarm / stack / log_pattern / freetext）
 #   fetch  —— 指向 plugin/ask_router.py 的 _FETCHERS 内置实现
 #   confidence —— 该类的基准置信度（high/medium/low）
 # 裁定：Q1=方案A(regex 命中原生执行, freq 仅候选); Q3=延 P4(完整 Webhook); 见设计文档 §12。
@@ -48,6 +48,13 @@ signal_extractors:
     confidence: medium
     fetch: alarm_simple
     note: Q3 裁定 P1 先兜「告警文本/JSON 已含错误码」；完整 Webhook 字段解析延后 P4
+  - id: stack
+    kind: stack
+    enabled: true
+    priority: 65
+    confidence: high
+    fetch: stack
+    note: P6 堆栈片段（异常类 / at 帧 / Caused by / 线程状态）→ 提示 skill:demo-product-stack-analysis；不路由工具
   - id: log_pattern
     kind: log_pattern
     enabled: true

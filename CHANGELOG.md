@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.0a0-sync — 2026-10-30（P6 混合输入）
+- 开放入口处理混合输入（描述+日志+堆栈一起贴）：① 错误码精度（裸数字只用局部窗口归类，不再把年份/指标值误判成码）；② 堆栈信号（异常类 / Caused by 链 / 帧 / 线程状态 → stack_tip 指向 stack-analysis skill）；③ desc/log/stack 分段呈现（segments + 逐项 segment 标注）。随 plugin/ask_router.py、plugin/entry_signal.yaml、plugin/ask.py 同步。
+
 ## 0.1.0a0-sync — 2026-10-29（追加）
 - 开放入口路由决策 trace 日志（route_trace_log）：启用时逐条记录抽取到的信号快照 + 命中主意图 route_id/tool/origin；纯增量、确定性、不影响主输出。随 plugin/ask_router.py、plugin/ask.py、plugin/config.py 同步。
 

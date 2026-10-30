@@ -22,8 +22,10 @@ _HERE = Path(__file__).resolve().parent
 _SIGNAL_YAML = _HERE / "entry_signal.yaml"
 _SCHEMA_EXPECTED = 1
 
-# 复用 ask.py 的码外形（含 DB 原生码 alpha 前缀）；P-008 边界匹配、P-009 不用 \d/\s
+# 复用 ask.py 的码外形（含 DB 原生码 alpha 前缀）；P-008 边界匹配、P-009 不用 [0-9]/[ 	]
 _CODE = re.compile(r"(?<![A-Za-z0-9])((?:[A-Za-z]{1,8}[-_]?)?[0-9]{3,5})(?![0-9])")
+# P6-C：裸数字归类用局部窗口——码只看其就近上下文，避免混合输入远处厂商词把年份/指标值误判成码。
+_CODE_LOCAL_WINDOW = 80
 # 产品码 vendor 哨兵：用非产品名常量而非产品名，保证去产品化改写（.py→demo_product / .yaml→demo_product）
 # 不会把两个文件的同一常量撕裂成不同形态。OSS 同步后，.py 与 intent_routes.yaml 仍同为 "product"。
 _PRODUCT_VENDOR = "product"
@@ -112,12 +114,36 @@ def _boundary_hit(name, text):
     return re.search(r"(?<![A-Za-z0-9_])" + re.escape(name) + r"(?![A-Za-z0-9_])", text, re.I) is not None
 
 
+def _is_date_fragment(text, m) -> bool:
+    """G1：码块落在日期/时间片段（2026-10、10-30）则排除（不把年份/序号当码）。"""
+    post = text[m.end():m.end() + 12]
+    pre = text[max(0, m.start() - 12):m.start()]
+    if re.match(r"[-/][0-9]", post):
+        return True
+    if re.search(r"[0-9][-/]$", pre):
+        return True
+    return False
+
+
+def _classify_code(raw, text, m, classify, *, message="", db_hint=""):
+    """G2/G3：裸无前缀数字用其局部窗口归类（避免混合输入远处厂商词误判；Q1 精神）；
+    含前缀（ORA-… 等）或已知产品码维持整段归类。"""
+    if raw.isdigit():
+        lo = max(0, m.start() - _CODE_LOCAL_WINDOW)
+        hi = min(len(text), m.end() + _CODE_LOCAL_WINDOW)
+        return classify(raw, message=text[lo:hi], db_hint=db_hint)
+    return classify(raw, message=message or text, db_hint=db_hint)
+
+
 def _fetch_error_code(text, *, message="", db_hint="", log_source=""):
+    """错误码抽取（含 P6-C 精度守卫）：日期片段 / 裸数字无近旁厂商一律不作码路由。"""
     from .code_origin import classify
     hits, seen = [], set()
     for m in _CODE.finditer(text):
         raw = m.group(1)
-        info = classify(raw, message=message or text, db_hint=db_hint)
+        if not raw or _is_date_fragment(text, m):
+            continue
+        info = _classify_code(raw, text, m, classify, message=message, db_hint=db_hint)
         origin = info.get("origin")
         if origin in ("unknown", "ambiguous"):
             continue
@@ -253,6 +279,106 @@ def _freq_candidates(text, n=3):
     return [w for w, _ in cnt.most_common(n)]
 
 
+# ---------------- A：混合输入分段（desc / log / stack，确定性、无副作用） ----------------
+
+def _line_segment_kind(line: str, prev: str = "") -> str:
+    """单行粗分类：stack（帧/异常/线程状态） > log（时间戳/级别词） > desc。"""
+    s = line.strip()
+    if not s:
+        return prev or "desc"
+    low = s.lower()
+    if re.match(r"^at [A-Za-z0-9_.$]+", s) or s.startswith("Caused by:"):
+        return "stack"
+    if re.match(r"^[A-Za-z0-9_.$]*(?:Exception|Error)(?![A-Za-z0-9_])", s):
+        return "stack"
+    if re.search(r"#[0-9]+[ 	]+(BLOCKED|WAITING|RUNNABLE|TIMED_WAITING)(?![A-Za-z0-9_])", s):
+        return "stack"
+    if re.match(r"^[0-9]{4}[-/][0-9]{1,2}[-/][0-9]{1,2}", s) or re.match(r"^[0-9]{1,2}:[0-9]{2}:[0-9]{2}", s):
+        return "log"
+    if any(k in low for k in ("error", "warn", "fatal", "info", "debug", "trace")):
+        return "log"
+    return "desc"
+
+
+def _partition(text):
+    """把整段输入按行粗分为相邻同类段。返回 list[{"kind", "text"}]。"""
+    segs = []
+    prev = ""
+    for ln in (text or "").splitlines():
+        kind = _line_segment_kind(ln, prev)
+        if ln.strip():
+            prev = kind
+        if segs and segs[-1]["kind"] == kind:
+            segs[-1]["text"] += "\n" + ln
+        else:
+            segs.append({"kind": kind, "text": ln})
+    return segs
+
+
+def _segment_for(s, parts):
+    """给信号标注来源段（stack→stack；log_pattern→log；error_code 就近找段，兜底 log；其余 desc）。"""
+    if s.kind == "stack":
+        return "stack"
+    if s.kind == "log_pattern":
+        return "log"
+    needle = s.raw or s.canonical or ""
+    if needle:
+        for p in parts:
+            if needle in p["text"]:
+                return p["kind"]
+    if s.kind == "error_code":
+        return "log"
+    return "desc"
+
+
+# ---------------- B：堆栈片段信号 ----------------
+
+def _is_stack_like(t):
+    """行级判定是否堆栈片段（帧 / Caused by / 异常头 / 线程状态）。"""
+    for ln in (t or "").splitlines():
+        s = ln.strip()
+        if not s:
+            continue
+        if re.match(r"^at [A-Za-z0-9_.$]+", s):
+            return True
+        if s.startswith("Caused by:"):
+            return True
+        if re.match(r"^[A-Za-z0-9_.$]*(?:Exception|Error)(?![A-Za-z0-9_])", s):
+            return True
+        if re.search(r"#[0-9]+[ 	]+(BLOCKED|WAITING|RUNNABLE|TIMED_WAITING)(?![A-Za-z0-9_])", s):
+            return True
+    return False
+
+
+def _fetch_stack(text, *, message="", db_hint="", log_source=""):
+    """B：堆栈片段——抽异常类 / Caused by 链 / 帧 / 线程状态；只提示，不路由工具（守 54 号 C）。"""
+    t = text or ""
+    if not _is_stack_like(t):
+        return []
+    heads = re.findall(r"(?m)^[ \t]*([A-Za-z0-9_.$]*(?:Exception|Error))(?![A-Za-z0-9_])", t)
+    causes = re.findall(r"(?m)^Caused by:[ 	]*(\S+[^\n]*)", t)
+    frames = re.findall(r"(?m)^[ \t]*at ([^\n]+)", t)
+    thread = re.findall(r"#[0-9]+[ 	]+(BLOCKED|WAITING|RUNNABLE|TIMED_WAITING)(?![A-Za-z0-9_])", t)
+    ex = ""
+    if heads:
+        ex = heads[0].split(":")[0].strip()
+    cause_cls = []
+    for c in causes:
+        tok = c.split(":")[0].split()[0].strip()
+        if tok:
+            cause_cls.append(tok)
+    chain = ([ex] if ex else []) + cause_cls
+    canonical = "stack:" + "<-".join(chain) if chain else "stack"
+    extra = {
+        "exception_class": ex,
+        "caused_by": cause_cls,
+        "frames": [f.strip() for f in frames[:3]],
+        "thread_state": thread[0] if thread else "",
+    }
+    return [Signal(kind="stack", raw="", canonical=canonical, trust="pattern",
+                   confidence="high", source_rule="stack_snippet", extra=extra)]
+
+
 def _fetch_log_pattern(text, *, message="", db_hint="", log_source=""):
     """"Q1：日志片段——只认 regex 身份/码；频次仅候选提示（extra），绝不驱动路由。"""
     if not _is_log_like(text):
@@ -297,6 +423,7 @@ _FETCHERS = {
     "operation": _fetch_operation,
     "db_type": _fetch_db_type,
     "alarm_simple": _fetch_alarm_simple,
+    "stack": _fetch_stack,
     "log_pattern": _fetch_log_pattern,
     "freetext": _fetch_freetext,
 }
@@ -317,12 +444,15 @@ def extract_all(text, *, message="", db_hint="", log_source=""):
                 signals.append(s)
         except Exception:
             continue
+    parts = _partition(text)
     out, seen = [], set()
     for s in signals:
         key = (s.kind, s.canonical or s.raw, s.vendor)
         if key in seen:
             continue
         seen.add(key)
+        s.extra = dict(s.extra or {})
+        s.extra["segment"] = _segment_for(s, parts)
         out.append(s)
     return out
 
@@ -431,6 +561,7 @@ _DIRECTION = {
     "operation": "运维操作的步骤 / 前置条件 / 风险",
     "db_type": "按库型定位诊断落点（DB 原生码）",
     "alarm": "告警对应错误码的诊断方向",
+    "stack": "堆栈分析（异常链 / 卡点 / 死锁 → skill:demo_product-stack-analysis）",
 }
 
 
@@ -469,10 +600,23 @@ def attach_intents(payload: dict, sigs: list, primary) -> None:
             item = {"kind": s.kind, "entry": s.canonical or s.raw,
                     "tool": _tool_for_signal(s), "confidence": s.confidence,
                     "source": s.source_rule}
+            _seg = s.extra.get("segment")
+            if _seg:
+                item["segment"] = _seg
             if s.kind == "log_pattern" and s.extra.get("freq_candidates"):
                 item["freq_candidates"] = s.extra["freq_candidates"]
             items.append(item)
         payload["intents"] = items
+        _segs = []
+        for _k in ("desc", "log", "stack"):
+            if any(_s.extra.get("segment") == _k for _s in sigs):
+                _segs.append(_k)
+        if _segs:
+            payload["segments"] = _segs
+        if any(s.kind == "stack" for s in sigs):
+            payload["stack_tip"] = ("输入含堆栈：可交给 skill:demo_product-stack-analysis"
+                                    "（gstack/jstack 判读、卡点/死锁定位）；"
+                                    "注意页面日志不上送全栈，需上节点抓取")
         if any(s.kind == "log_pattern" for s in sigs):
             payload["log_tip"] = "输入像日志片段：可交给 skill:demo_product-log-analyzer 的 funnel.py 取数/聚类（仅提示，不跨层调用）"
         alt = []

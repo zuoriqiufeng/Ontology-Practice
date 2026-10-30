@@ -112,6 +112,11 @@ def ask(args, **kwargs):
         payload = _trim(_needs_payload(meta), 600)
         if _sigs:
             attach_intents(payload, _sigs, _primary)
+            if (not any(s.kind in ("error_code", "symptom", "operation") for s in _sigs)
+                    and any(s.kind == "stack" for s in _sigs)):
+                payload["answer"] = ("识别为堆栈片段（异常链/线程状态），但没有可定位的产品/DB "
+                                     "错误码或已登记症状入口；请交给 skill:demo_product-stack-analysis "
+                                     "判读卡点/死锁，或补充错误码与库类型。")
         if detail not in ("ref", "full", "all") and _need_enrich(payload, tool):
             enrich_items, enrich_err, enrich_top = _enrich(q)
             if enrich_items:
