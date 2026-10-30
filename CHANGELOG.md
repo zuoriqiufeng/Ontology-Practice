@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.0a0-sync — 2026-10-30（进程实体补缺，bkn-20261030-2）
+- 进程实体注册集按产品实际进程登记（PROCESS_IDS 7→10）：新增 PG 源端 pgtrack/pgreplicator、SQL Server 源端 iamss 三个 process 实体（BKN 本体侧，仅随 plugin/constants.py 同步漂移；bkn/ 对象文件与 tests 不出内网镜像）。
+
 ## 0.1.0a0-sync — 2026-10-30（P6 混合输入）
 - 开放入口处理混合输入（描述+日志+堆栈一起贴）：① 错误码精度（裸数字只用局部窗口归类，不再把年份/指标值误判成码）；② 堆栈信号（异常类 / Caused by 链 / 帧 / 线程状态 → stack_tip 指向 stack-analysis skill）；③ desc/log/stack 分段呈现（segments + 逐项 segment 标注）。随 plugin/ask_router.py、plugin/entry_signal.yaml、plugin/ask.py 同步。
 

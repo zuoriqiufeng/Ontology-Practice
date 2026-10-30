@@ -214,8 +214,12 @@ VALID_SECTION_TYPES = [
 
 # 运行时进程对象注册集（24 号：目录不再是语义信号——原 bkn/processes/ 已并入 objects/）
 # 用途：resolver 识别进程对象、lint 做「常量集 ↔ objects/<id>.bkn 存在性」一致性校验。
+# 本体可路由进程实体注册集——按产品实际进程登记（2026-10-30 裁断：非钉死常数集）。
+#  9.0 规范 7 进程 + 链路实测组件（PG 源端 pgtrack/pgreplicator、SQL Server 源端 iamss）。
+# 语义：resolver._iter_process_ids() 以此为事实来源，须与 bkn/objects/<id>.bkn 一一对应（24 号）。
 PROCESS_IDS = [
     "iatrack", "iadumper", "ialoader", "iahelper", "iamonitor", "iadiff", "iaproxy",
+    "iamss", "pgreplicator", "pgtrack",
 ]
 
 # 9.0 版本之前的进程名（用户 2026-10-13 口径）——**不是** PROCESS_IDS 的成员：
