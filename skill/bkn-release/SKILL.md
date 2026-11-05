@@ -32,7 +32,7 @@ tools_used:
 
 > **一句话**：把改好的 BKN 送到现场、证明送对了、发错了能退，且**每一步都留痕**。
 > **两条铁律**：① 前置校验不跑完不得发包；② **回滚 = 一次新发布**（已发布内容不可改写，版本号只前进）。
-> 依据：原 doc/update/release-flow.md（2026-10-15 清理）、原 doc/update/rollback.md（2026-10-15 清理）；引用纪律见 AGENT.md R-1（**只写纯文本路径，不写链接**）。
+> 依据：原 doc/update/release-flow.md（已清理）、原 doc/update/rollback.md（已清理）；引用纪律见 AGENT.md R-1（**只写纯文本路径，不写链接**）。
 
 ## 速览
 
@@ -119,8 +119,8 @@ python3 scripts/changeset.py --check --strict
 
 | 主题 | 权威位置 |
 |---|---|
-| 发布主流程原文 | `references/release-flow.md`（原 doc/update/release-flow.md，2026-10-15 清理） |
-| 回滚决策树原文 | `references/rollback.md`（原 doc/update/rollback.md，2026-10-15 清理） |
+| 发布主流程原文 | `references/release-flow.md`（原 doc/update/release-flow.md，已清理） |
+| 回滚决策树原文 | `references/rollback.md`（原 doc/update/rollback.md，已清理） |
 | BKN 改动逻辑（改什么） | skill:bkn-updater |
 | Plugin 代码规范（代码怎么改） | plugin/CLAUDE.md |
 | 跨全仓写作与引用纪律 | AGENT.md |

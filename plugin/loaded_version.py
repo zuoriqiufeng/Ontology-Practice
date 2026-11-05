@@ -56,6 +56,7 @@ def _read_prev_version(path: Path):
 
 #: 本进程已写过的 (from_version, to_version) 对 —— B6 的循环保护（见 _emit_reload_event）
 _EMITTED_PAIRS: set = set()
+_EMIT_LOCK = threading.Lock()  # 87 O-04: check-then-add 原子化
 
 #: 「本进程已观测过一次版本」守卫 —— 避免每次 Tool 调用都读盘 + 写自证（见 observe_loaded_version）
 _OBSERVED = False
@@ -79,9 +80,16 @@ def _emit_reload_event(from_version, record: dict, ms: int | None = None) -> Non
     try:
         to_version = record.get("version_id") or record.get("version_hash")
         pair = (from_version, to_version)
-        if pair in _EMITTED_PAIRS:
-            return                      # 循环保护：同一 (from→to) 对本进程只写一条
-        _EMITTED_PAIRS.add(pair)
+        with _EMIT_LOCK:
+            if pair in _EMITTED_PAIRS:
+                return                      # 循环保护：同一 (from→to) 对本进程只写一条
+            _EMITTED_PAIRS.add(pair)
+        # 86 号 R1a：换版即清检索结果缓存，避免新 BKN 下命中旧检索结果
+        try:
+            from .retrieval_cache import clear as _clear_retrieval_cache
+            _clear_retrieval_cache()
+        except Exception:
+            pass
         from .usage_log import log_usage
         rec_hash = record.get("record_hash") or record.get("version_hash") or ""
         log_usage("bkn_reload",

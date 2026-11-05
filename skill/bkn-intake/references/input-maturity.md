@@ -1,6 +1,6 @@
 # 输入成熟度与交接单（references/input-maturity.md）
 
-> **本件是什么**：skill:bkn-intake 的**成熟度与交接单**正文——全量承接 原 doc/update/70-requirement-intake.md（2026-10-15 清理）
+> **本件是什么**：skill:bkn-intake 的**成熟度与交接单**正文——全量承接 原 doc/update/70-requirement-intake.md（已清理）
 > （2026-10-14 落盘，62 行），供预处理与建模前置直接照用。
 > **不是**：不是 PRD 模板、**不产生新的本体元素**、不替代 24 号 §2.3 的准入四关（它只是四关的**输入**）。
 > **来源**：OpenBKN 对照的 G-07（对方有完整的 bkn-requirement）；本件只取**成熟度分级 ＋ 待确认清单 ＋ 建模清单**三件事，
@@ -70,4 +70,4 @@
 | 建模清单候选三分类 | 候选交接单 §三 | skill/bkn 或 skill:bkn-updater |
 | 论证文档 | doc/optimize/pending/C-*/payload/ | 评审 → scripts/pending_apply.py（**本 Skill 不跑**） |
 
-*本件承接：原 doc/update/70-requirement-intake.md（2026-10-15 清理）（创建 2026-10-14；对照驱动 G-07 的最小落地，不移植对方 PRD/访谈体系）。*
+*本件承接：原 doc/update/70-requirement-intake.md（已清理）（对照驱动 G-07 的最小落地，不移植对方 PRD/访谈体系）。*

@@ -61,6 +61,10 @@ def _norm_product(code: str):
     return None
 
 
+_NEEDS = "message 或 db_type"
+_HINT_AMBIG = "无法单凭码形断言来源（ambiguous）；需要 message 或 db_type 才能裁决，也可能不是数据库错误码（Demo Product 内部引用 / HTTP 状态码）。"
+
+
 _VENDORS = {
     "oracle": "oracle", "ora": "oracle",
     "mysql": "mysql", "mariadb": "mysql",
@@ -113,9 +117,12 @@ def classify(code: str, message: str = "", db_hint: str = "") -> dict:
                 continue
             if rule.get("ambiguous"):
                 return {"origin": "ambiguous", "vendor": rule.get("vendor", ""), "ambiguous": True,
-                        "rule": rule.get("id", ""), "confidence": "low"}
+                        "rule": rule.get("id", ""), "confidence": "low",
+                        "needs": _NEEDS, "hint": _HINT_AMBIG}
             return {"origin": rule.get("origin", "unknown"), "vendor": rule.get("vendor", ""),
                     "ambiguous": False, "rule": rule.get("id", ""), "confidence": "medium"}
+        out["needs"] = _NEEDS
+        out["hint"] = "未识别为已知数据库/产品错误码（origin=unknown）；可能为 Demo Product 内部引用或非数据库码，请提供 message 或 db_type。"
         return out
     except Exception:  # noqa: BLE001
         return out

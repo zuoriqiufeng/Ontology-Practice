@@ -67,5 +67,5 @@ Agent:
 | `skill/bkn-updater/SKILL.md` | 完整更新流程与格式规范 |
 | `skill:bkn-plugin`（SKILL.md） | Plugin 架构说明（权威；原 `references/plugin-architecture.md` 过期快照已删） |
 | `skill/bkn-updater/references/update-workflow.md` | 历史更新工作流 |
-| `references/workflow-steps.md` | 新增 Skill / Action 的 SOP（原 `doc/update/add-skill.md`，2026-10-15 清理） |
-| `references/workflow-steps.md` | 修改 Skill 的 SOP（同上一行；原 `doc/update/change-skill.md`，2026-10-15 清理） |
+| `references/workflow-steps.md` | 新增 Skill / Action 的 SOP（原 `doc/update/add-skill.md`，已清理） |
+| `references/workflow-steps.md` | 修改 Skill 的 SOP（同上一行；原 `doc/update/change-skill.md`，已清理） |

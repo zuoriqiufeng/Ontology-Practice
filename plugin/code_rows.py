@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import re
+import threading
 
 from .config import CODE_ROWS_MAX, CODE_ROW_MAX_CHARS, CODE_ROW_WINDOW, EXACT_CODE_LOOKUP
 
@@ -162,17 +163,20 @@ def _row_text(content: str, start: int, end: int) -> tuple[str, str]:
 
 
 _SIDECAR: dict | None = None
+_sidecar_lock = threading.Lock()  # 87 O-02
 
 
 def _sidecar_meaning(canonical: str) -> str:
     """侧车（error_codes.yaml）里的中文释义；缺表/缺键返回空串。"""
     global _SIDECAR
     if _SIDECAR is None:
-        try:
-            from .resolver import _load_error_codes
-            _SIDECAR = _load_error_codes() or {}
-        except Exception:  # noqa: BLE001
-            _SIDECAR = {}
+        with _sidecar_lock:
+            if _SIDECAR is None:
+                try:
+                    from .resolver import _load_error_codes
+                    _SIDECAR = _load_error_codes() or {}
+                except Exception:  # noqa: BLE001
+                    _SIDECAR = {}
     entry = (_SIDECAR.get(canonical) or _SIDECAR.get(canonical.lstrip("-"))
              or _SIDECAR.get(canonical.replace("-", "")) or {})
     for key in ("zh", "meaning", "en"):

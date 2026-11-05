@@ -112,7 +112,7 @@ BKN 生成 / 新建本体 / 设计知识网络 / 把文档变成 BKN / 生成 bk
 > （库 / 端口 / 命令 / 阈值 / 案例全部作废），须为该产品**重新登记**一张占位符对照表，并给它建自己的产品 skill。
 > 产品专属实例（真实案例、具体命令、产品取值）落在产品 skill 的正文里，不在本件。
 
-## 工具速查（2026-10-18）
+## 工具速查
 
 | 场景 | 用什么 |
 |---|---|
@@ -128,5 +128,5 @@ BKN 生成 / 新建本体 / 设计知识网络 / 把文档变成 BKN / 生成 bk
 - [syntax.md](references/syntax.md) — 语法规范
 - [templates.md](references/templates.md) — 生成模板
 - [workflow.md](references/workflow.md) — 工作流
-- （另有 **31 个**历史文档已物理归档至 [references/archive/](references/archive/)（2026-10-15 实测：本目录共 36 个 `.md`（含 README 索引），已迁出 5 件产品主题件至产品 skill 的 `references/archive/`，余 31）；含档 C 的「已废止」标注件；**接线仅上列 4 个**）
+- （另有 **31 个**历史文档已物理归档至 [references/archive/](references/archive/)（实测：本目录共 36 个 `.md`（含 README 索引），已迁出 5 件产品主题件至产品 skill 的 `references/archive/`，余 31）；含档 C 的「已废止」标注件；**接线仅上列 4 个**）
 - （历史版本 v2.1-v2.3 更新记录 → `90-history/bkn-changelog.md`）

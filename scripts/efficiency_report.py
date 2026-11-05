@@ -60,6 +60,9 @@ def main():
     enrich_calls = sum(1 for d in calls if d.get("enrich"))
     enrich_chars = sum(int(d.get("enrich_chars") or 0) for d in calls)
     durs = [int(d.get("duration_ms") or 0) for d in calls if d.get("duration_ms")]
+    durs_sorted = sorted(durs)
+    d_p50 = statistics.median(durs_sorted) if durs else 0
+    d_p95 = (durs_sorted[min(int(len(durs_sorted) * 0.95), len(durs_sorted) - 1)] if durs else 0)  # 87 O-13: 真 p95
     rows = [
         ("真实会话数", len(sessions)),
         ("调用总数", len(calls)),
@@ -70,7 +73,7 @@ def main():
         ("检索输出 chars", "%d（占 %d%%）" % (ret_chars, round(100 * ret_chars / max(total_chars, 1)))),
         ("其中 search_qdrant chars", qd_chars),
         ("tokens 代理（chars/2.5）", round(total_chars / 2.5)),
-        ("延迟 p50 / p95（ms）", "%d / %d" % (round(statistics.median(durs)), max(durs)) if durs else "-"),
+        ("延迟 p50 / p95（ms）", "%d / %d" % (round(d_p50), d_p95) if durs else "-"),
         ("M10 search_qdrant→search_qdrant", pairs.get(("search_qdrant", "search_qdrant"), 0)),
         ("M10 相邻对 Top5", "；".join("%s→%s %d" % (a, b, n) for (a, b), n in top_pairs) or "-"),
         ("M11 单任务调用 中位/P90/max", "%s / %s / %s" % (statistics.median(counts) if counts else 0, p90, counts[-1] if counts else 0)),

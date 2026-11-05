@@ -32,3 +32,15 @@ _trajectory.TRAJ_LOG = _TMP / "trajectories" / "trajectory.jsonl"
 # 批 V-1 × U-2（2026-10-12）：服务自证同理——test_resolver 会真调 reload()，
 # 其自证会写进生产 logs/.loaded_version.json（检查脚本据此假报"一致"）；同法补隔离。
 _loaded_version.LOADED_VERSION_FILE = _TMP / ".loaded_version.json"
+
+
+# 86 号 R1a（镜像随内部同步）：检索结果缓存为进程级共享状态，测试间需隔离，否则同参二次命中
+# 会污染 mock 预期 / precision_guard 断言。每个用例后清空。
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True, scope="function")
+def _reset_retrieval_cache():
+    yield
+    from plugin import retrieval_cache
+    retrieval_cache.clear()

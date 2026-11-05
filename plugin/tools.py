@@ -19,7 +19,7 @@ from .relations import RelationTraverser
 from .context_loader import ContextLoader
 from .observability import (  # 44 号 §3.2：过程级事件的旁路累积器
     call_scope, ontology_enter, ontology_exit, ontology_use, ontology_drop,
-    ontology_source, ontology_stage, ontology_cold,
+    ontology_source, ontology_stage,
     ontology_graph_branch, ontology_graph_used, ontology_edge,   # P3：图路径消耗
 )
 from .supplement import assess_confidence, log_gap, fallback_to_qdrant, search_qdrant
@@ -33,12 +33,14 @@ from .supplement import (
 )
 # v3.6 chunk-aware search
 from .supplement import _search_chunk_level, _search_mini_first, _expand_parents
+from .bm25 import PATTERN_META_KEYS
 from .constants import DB_ERROR_PREFIXES, SCENARIO_HINTS
 from .config import BKN_ROOT, SEARCH_CHUNK_MODE
 
 
 # 全局实例 (Plugin 启动时初始化)
 _resolver = None
+_init_lock = threading.Lock()  # 87 O-02
 _traverser = None
 _loader = None
 
@@ -110,9 +112,11 @@ def _filter_command_fields(obj, leaked=None):
 def _init():
     global _resolver, _traverser, _loader
     if _resolver is None:
-        _resolver = BKNResolver(bkn_root=BKN_ROOT)
-        _traverser = RelationTraverser(bkn_root=BKN_ROOT)
-        _loader = ContextLoader()
+        with _init_lock:
+            if _resolver is None:
+                _resolver = BKNResolver(bkn_root=BKN_ROOT)
+                _traverser = RelationTraverser(bkn_root=BKN_ROOT)
+                _loader = ContextLoader()
 
 
 def _json_len(obj):
@@ -128,6 +132,8 @@ def _json_len(obj):
 
 def _compact_search_result(data, max_chars=1200):
     """检索结果的紧凑裁剪：每段 ≤120 字、每个列表 ≤3 项，总量 ≤max_chars。
+
+    87 O-07：此处按字段裁剪为「先看一眼」的精简视图；外层 `_apply_output_budget` 另做总量预算，两层截断是刻意分层（勿合并成一层）。
 
     不用 `_enforce_budget`：它按条丢弃，会把 hits 整段砍光（实测只剩 63 字），
     这里按字段截断，保证至少保留前几条摘要。
@@ -1317,11 +1323,10 @@ def search_qdrant_handler(args, **kwargs):
                         "source": (r.payload or {}).get("document_id", ""),
                     }
                     # 模式库 payload 字段透传（log_patterns_collection）
-                    from .bm25 import PATTERN_META_KEYS
-                    for f in PATTERN_META_KEYS:
-                        v = (r.payload or {}).get(f)
+                    for field in PATTERN_META_KEYS:
+                        v = (r.payload or {}).get(field)
                         if v is not None:
-                            hit[f] = v
+                            hit[field] = v
                     raw_hits.append(hit)
 
                 # BM25 主通道：特征提取优先（错误码/精确项先 targeted BM25）
@@ -1416,10 +1421,9 @@ def search_qdrant_handler(args, **kwargs):
                 if _k in h:
                     h_out[_k] = h[_k]
             # 日志模式库 payload 字段透传（v1.7，log_patterns_collection）
-            from .bm25 import PATTERN_META_KEYS
-            for _f in PATTERN_META_KEYS:
-                if _f in h:
-                    h_out[_f] = h[_f]
+            for field in PATTERN_META_KEYS:
+                if field in h:
+                    h_out[field] = h[field]
             if dimension:
                 h_out["_dim"] = dimension
             if h.get("_fallback_reason"):
@@ -1604,13 +1608,27 @@ def _search_qdrant_batch_inner(queries_spec, task_id=None, session_id=None,
                     "chunk_mode": nq.get("chunk_mode", SEARCH_CHUNK_MODE),
                     "hits": [], "count": 0, "error": str(e)}
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(normalized), MAX_BATCH_QUERIES)) as pool:
-        futures = {pool.submit(_run_one, nq): nq["idx"] for nq in normalized}
-        batch_results = []
-        for fut in concurrent.futures.as_completed(futures):
-            batch_results.append(fut.result())
+    # 86 号 R1b：完全相同规格（query/collection/chunk_mode/top_k/dimension 全同）只检索一次，按 idx 复用
+    _spec_key = lambda nq: (nq["query"], nq["collection"], nq.get("chunk_mode", SEARCH_CHUNK_MODE),
+                            nq["top_k"], nq.get("dimension"))
+    _first_idx = {}
+    for nq in normalized:
+        _first_idx.setdefault(_spec_key(nq), nq["idx"])
+    _first_set = set(_first_idx.values())
+    _submit = [nq for nq in normalized if nq["idx"] in _first_set]
 
-    # 按原始 idx 排序恢复顺序
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(_submit), MAX_BATCH_QUERIES)) as pool:
+        futures = {pool.submit(_run_one, nq): nq["idx"] for nq in _submit}
+        _by_idx = {}
+        for fut in concurrent.futures.as_completed(futures):
+            r = fut.result()
+            _by_idx[r["idx"]] = r
+
+    # 按原始 idx 排序恢复顺序；同规格复用首个结果（维度相同 → 渲染结果一致）
+    batch_results = []
+    for nq in normalized:
+        r = _by_idx[_first_idx[_spec_key(nq)]]
+        batch_results.append({**r, "idx": nq["idx"], "query": nq["query"]})
     batch_results.sort(key=lambda r: r["idx"])
 
     total_hits = sum(r["count"] for r in batch_results)
@@ -2211,7 +2229,6 @@ def diagnose_mechanism(args, **kwargs):
         max_c = 4
     sem = _mechanisms()
     mechs = {m["id"]: m for m in _leaf_mechanisms()}
-    conv = sem.get("convergence") or {}
     tier_order = list(sem.get("tier_order") or [])
 
     # ① 入口归一

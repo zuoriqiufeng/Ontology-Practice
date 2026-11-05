@@ -274,8 +274,16 @@ ASK_ENRICH_MIN_SCORE = _as_float(os.environ.get("ASK_ENRICH_MIN_SCORE", "0.35"),
 ASK_ENRICH_CHARS = _as_int(os.environ.get("ASK_ENRICH_CHARS", "600"), 600)
 
 SEARCH_OUTPUT_MAX_CHARS = _as_int(
-    os.environ.get("SEARCH_OUTPUT_MAX_CHARS", SEARCH.get("output_max_chars", 0)), 0
-)
+    os.environ.get("SEARCH_OUTPUT_MAX_CHARS", SEARCH.get("output_max_chars", 12000)), 12000
+)  # 86 号 R1c：无 config.yaml 键时默认 12000（内部与 OSS 一致）
+
+# 86 号 R1a：检索结果缓存（read-only 加速；bkn_reload 换版时清空）
+_SEARCH_CACHE = SEARCH.get("cache", {})
+SEARCH_CACHE_ENABLED = bool(_SEARCH_CACHE.get("enabled", True))
+SEARCH_CACHE_TTL = _as_int(os.environ.get("SEARCH_CACHE_TTL", _SEARCH_CACHE.get("ttl_seconds", 300)), 300)
+SEARCH_CACHE_MAX = _as_int(os.environ.get("SEARCH_CACHE_MAX", _SEARCH_CACHE.get("max_entries", 256)), 256)
+# 86 号 R4b：diagnose_db_link 的 Qdrant 补检索闸门（auto | true | false）
+SEARCH_DB_LINK_QDRANT_SUPPLEMENT = str(SEARCH.get("db_link_qdrant_supplement", "auto")).lower()
 
 # 豁免 _wrap() 的 Tool 输出总量预算 (v3.9): 0=无限制(默认)
 # 独立于 search.output_max_chars —— 后者语义是「检索类输出预算」，且 raw 模式会跳过它。
@@ -305,7 +313,7 @@ LOG_ROTATE_BACKUPS = _as_int(
 )
 # 日文件保留天数（2026-09-30 日期轮转）：0 = 永久保留；N = 清理早于 N 天的日文件及其分片
 LOG_ROTATE_RETENTION_DAYS = _as_int(
-    os.environ.get("LOG_ROTATE_RETENTION_DAYS", LOG_ROTATE.get("retention_days", 0)), 0
+    os.environ.get("LOG_ROTATE_RETENTION_DAYS", LOG_ROTATE.get("retention_days", 90)), 90  # 87 O-12: 默认 90 天
 )
 LOG_ROTATE_ROUTE_TRACE_MAX_BYTES = _as_int(
     os.environ.get("LOG_ROTATE_ROUTE_TRACE_MAX_BYTES", LOG_ROTATE.get("route_trace_max_bytes", 262144)),

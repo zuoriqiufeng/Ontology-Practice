@@ -17,14 +17,13 @@ import hashlib
 import json
 import logging
 import re
+import threading
 import time
-from collections import defaultdict
-from pathlib import Path
 from typing import List, Optional
 
 from .config import (
     QDRANT_HOST, QDRANT_PORT, QDRANT_COLLECTION, QDRANT_TIMEOUT,
-    EMB_MODE, EMB_MODEL_NAME, EMB_DEVICE, EMB_HF_OFFLINE, EMB_HF_HOME,
+    EMB_MODEL_NAME, EMB_DEVICE, EMB_HF_OFFLINE, EMB_HF_HOME,
     EMBEDDING_DIMENSION,
     SEARCH_TOP_K, SEARCH_SCORE_THRESHOLD, SEARCH_HYBRID,
     SEARCH_FALLBACK_NONE, SEARCH_FALLBACK_PARTIAL,
@@ -41,7 +40,7 @@ from .config import (
     # v3.4 BGE precision guard
     SEARCH_BM25_PRECISION_GUARD,
     # v3.6 chunk-aware search
-    SEARCH_CHUNK_MODE, MINI_FIRST_TOP_K_MULTIPLIER, PARENT_EXPAND_LIMIT_MULTIPLIER,
+    MINI_FIRST_TOP_K_MULTIPLIER, PARENT_EXPAND_LIMIT_MULTIPLIER,
     # 2A 日志路径可配置
     resolve_log_path,
 )
@@ -57,6 +56,7 @@ from .knowledge_registry import (
 GAP_LOG_PATH = resolve_log_path("gap_log.jsonl")
 
 logger = logging.getLogger(__name__)
+from . import retrieval_cache   # 86 号 R1a：检索结果缓存（仅顶层 search_qdrant 装饰，保全叶子检索 _path 观测）
 
 
 # ======================================================================
@@ -186,6 +186,8 @@ def _path_exit(c, token, final=None) -> None:
 # 无 task_id 上下文的内部调用落 _DEFAULT_DIM_KEY 桶, 不进按任务报告。
 _DEFAULT_DIM_KEY = "_default"
 _DIM_STORE: dict[str, dict[str, int]] = {}
+_dim_store_lock = threading.Lock()  # 87 O-03
+_DIM_STORE_MAX_TASKS = 64  # 87 O-03
 
 # ── v3.7: 诊断专用维度（拓展 design_solution 9 维度，新增规则配置维度）──
 
@@ -272,7 +274,8 @@ def _get_known_dimensions(tool_name: str = None) -> list[str]:
 def get_dimension_coverage(tool_name: str = None, task_id: str = None) -> dict:
     """返回某任务 (task_id 分桶) 的维度覆盖度报告"""
     known = _get_known_dimensions(tool_name)
-    bucket = _DIM_STORE.get(task_id or _DEFAULT_DIM_KEY, {})
+    with _dim_store_lock:
+        bucket = dict(_DIM_STORE.get(task_id or _DEFAULT_DIM_KEY, {}))
     covered = [d for d in known if d in bucket]
     uncovered = [d for d in known if d not in bucket]
     return {
@@ -286,13 +289,22 @@ def get_dimension_coverage(tool_name: str = None, task_id: str = None) -> dict:
 
 def _track_dimension(dim_name: str, hit_count: int, task_id: str = None):
     """记录某维度的搜索命中数（按 task_id 分桶累积）"""
-    if dim_name:
-        bucket = _DIM_STORE.setdefault(task_id or _DEFAULT_DIM_KEY, {})
+    if not dim_name:
+        return
+    key = task_id if task_id is not None else _DEFAULT_DIM_KEY
+    with _dim_store_lock:
+        bucket = _DIM_STORE.setdefault(key, {})
         bucket[dim_name] = bucket.get(dim_name, 0) + hit_count
+        if key != _DEFAULT_DIM_KEY and len(_DIM_STORE) > _DIM_STORE_MAX_TASKS:
+            for k in _DIM_STORE:
+                if k != _DEFAULT_DIM_KEY:
+                    _DIM_STORE.pop(k)
+                    break
 
 def reset_dimension_coverage(task_id: str = None):
     """清空指定任务的维度覆盖记录"""
-    _DIM_STORE.pop(task_id or _DEFAULT_DIM_KEY, None)
+    with _dim_store_lock:
+        _DIM_STORE.pop(task_id or _DEFAULT_DIM_KEY, None)
 
 # 各 Tool 必需的关键字段 (缺失任一即视为 partial)
 # 21 号 2B 校准：元组 = 「任一命中即可」（any-of）；字符串 = 必须存在。
@@ -326,6 +338,7 @@ REQUIRED_FIELDS = {
 
 _qdrant_client = None
 _embedding_model = None
+_lazy_init_lock = threading.Lock()  # 87 O-02: 懒加载单例双检锁
 _init_warnings: list[str] = []  # 依赖初始化失败/降级原因, 只写一次
 
 
@@ -343,15 +356,17 @@ def get_search_warnings() -> list[str]:
 def _get_qdrant_client():
     global _qdrant_client
     if _qdrant_client is None:
-        try:
-            from qdrant_client import QdrantClient
-            _qdrant_client = QdrantClient(QDRANT_HOST, port=QDRANT_PORT, timeout=QDRANT_TIMEOUT)
-        except ImportError:
-            _record_init_warning("qdrant_client 未安装, 向量搜索不可用")
-            _qdrant_client = False
-        except Exception as e:
-            _record_init_warning(f"Qdrant 客户端初始化失败: {e}")
-            _qdrant_client = False
+        with _lazy_init_lock:
+            if _qdrant_client is None:
+                try:
+                    from qdrant_client import QdrantClient
+                    _qdrant_client = QdrantClient(QDRANT_HOST, port=QDRANT_PORT, timeout=QDRANT_TIMEOUT)
+                except ImportError:
+                    _record_init_warning("qdrant_client 未安装, 向量搜索不可用")
+                    _qdrant_client = False
+                except Exception as e:
+                    _record_init_warning(f"Qdrant 客户端初始化失败: {e}")
+                    _qdrant_client = False
     return _qdrant_client if _qdrant_client is not False else None
 
 
@@ -386,20 +401,22 @@ def _validate_qdrant_dimension(client, collection_name: str = QDRANT_COLLECTION)
 def _get_embedding_model():
     global _embedding_model
     if _embedding_model is None:
-        try:
-            import os
-            if EMB_HF_HOME:
-                os.environ["HF_HOME"] = EMB_HF_HOME
-            if EMB_HF_OFFLINE:
-                os.environ["HF_HUB_OFFLINE"] = "1"
-            from sentence_transformers import SentenceTransformer
-            _embedding_model = SentenceTransformer(EMB_MODEL_NAME, device=EMB_DEVICE)
-        except ImportError:
-            _record_init_warning("sentence_transformers 未安装, Embedding 模型不可用")
-            _embedding_model = False
-        except Exception as e:
-            _record_init_warning(f"Embedding 模型加载失败: {e}")
-            _embedding_model = False
+        with _lazy_init_lock:
+            if _embedding_model is None:
+                try:
+                    import os
+                    if EMB_HF_HOME:
+                        os.environ["HF_HOME"] = EMB_HF_HOME
+                    if EMB_HF_OFFLINE:
+                        os.environ["HF_HUB_OFFLINE"] = "1"
+                    from sentence_transformers import SentenceTransformer
+                    _embedding_model = SentenceTransformer(EMB_MODEL_NAME, device=EMB_DEVICE)
+                except ImportError:
+                    _record_init_warning("sentence_transformers 未安装, Embedding 模型不可用")
+                    _embedding_model = False
+                except Exception as e:
+                    _record_init_warning(f"Embedding 模型加载失败: {e}")
+                    _embedding_model = False
     return _embedding_model if _embedding_model is not False else None
 
 
@@ -744,6 +761,7 @@ def _search_chunk_level(
     levels: list[str],
     client=None,
     model=None,
+    emb: list = None,
     hybrid: bool = True,
     collection: str = None,
 ) -> list[dict]:
@@ -781,7 +799,8 @@ def _search_chunk_level(
         if collection is None:
             raise
         _record_init_warning(f"自定义 collection '{target_collection}' 维度校验已跳过")
-    emb = model.encode(query).tolist()
+    if emb is None:
+        emb = model.encode(query).tolist()  # 87 O-10: 复用调用方已编向量，避免重复编码
 
     # ── BGE dense 搜索（按 chunk_level 过滤）──
     _t_dense = time.perf_counter()
@@ -986,11 +1005,15 @@ def _search_mini_first(
         _path_exit(_pc, _ptok, [])
         return []
 
+    # 87 O-10: 全流程只编码一次，正式/回源/补充共用同一向量
+    _t_q_emb = time.perf_counter()
+    q_emb = model.encode(query).tolist()
+
     # Phase 1: mini ANN（带 BM25 全库 RRF），取 top_k * 2
     _t_mini = time.perf_counter()
     all_hits = _search_chunk_level(
         query, top_k * MINI_FIRST_TOP_K_MULTIPLIER, ["mini"],
-        client=client, model=model, hybrid=True, collection=collection,
+        client=client, model=model, emb=q_emb, hybrid=True, collection=collection,
     )
 
     # 分离 BGE 命中的 mini 与 BM25 带来的其他层结果
@@ -1003,7 +1026,7 @@ def _search_mini_first(
     if not mini_hits:
         # Fallback: 直接搜 standard（hybrid=True 保留 BM25 补充）
         _fb = _search_chunk_level(
-            query, top_k, ["standard"], client=client, model=model, hybrid=True,
+            query, top_k, ["standard"], client=client, model=model, emb=q_emb, hybrid=True,
             collection=collection,
         )
         _path_exit(_pc, _ptok, _fb)
@@ -1070,7 +1093,7 @@ def _search_mini_first(
         existing_ids = {h.get("_key") for h in results}
         std_hits = _search_chunk_level(
             query, top_k - len(results), ["standard"],
-            client=client, model=model, hybrid=True, collection=collection,
+            client=client, model=model, emb=q_emb, hybrid=True, collection=collection,
         )
         for h in std_hits:
             # 21 号 2F：与 result_map 同用点 ID 作去重键（原 (source, chunk_id) 会漏判重复）
@@ -1424,6 +1447,7 @@ def _precision_guard_fallback(
     return _out
 
 
+@retrieval_cache._cached_retrieval
 def search_qdrant(query: str, top_k: int = None, hybrid: bool = True,
                   collection: str = None) -> list[dict]:
     """Qdrant 向量检索 (v2.1: query_points + 图片占位符过滤; v3.3: BGE miss→BM25 fallback; v3.4: BGE precision guard)
@@ -1620,13 +1644,13 @@ def _fallback_scroll_raw(limit: int, collection: str = None) -> list[dict]:
 _DECOMPOSE_TEMPLATES = {
     "design_solution": [
         ("字符集/类型映射", lambda s, t: f"{s}到{t} 字符集转换 数据类型映射 字段长度 注意事项"),
-        ("全量同步参数",    lambda s, t: f"全量同步 大表拆分 导出线程 装载线程 表覆盖策略 单表拆分"),
+        ("全量同步参数",    lambda s, t: "全量同步 大表拆分 导出线程 装载线程 表覆盖策略 单表拆分"),
         ("增量/日志解析",   lambda s, t: f"{s} 增量同步 日志解析 CDC 配置要求"),
-        ("断点续传/容错",   lambda s, t: f"断点续传 checkpoint LSN 中断恢复 错误处理 冲突处理"),
-        ("数据校验/对比",   lambda s, t: f"数据校验 整库对比 表对比 一致性检查 差异修复"),
+        ("断点续传/容错",   lambda s, t: "断点续传 checkpoint LSN 中断恢复 错误处理 冲突处理"),
+        ("数据校验/对比",   lambda s, t: "数据校验 整库对比 表对比 一致性检查 差异修复"),
         ("源端特定配置",    lambda s, t: f"{s} 数据库配置 编目 编码 环境要求 Demo Product部署"),
         ("目标端特定配置",  lambda s, t: f"{t} 同步 配置 字符集 用户授权 环境要求"),
-        ("跨地域/网络优化", lambda s, t: f"跨地域 异地同步 网络优化 压缩 带宽 延迟 批量提交"),
+        ("跨地域/网络优化", lambda s, t: "跨地域 异地同步 网络优化 压缩 带宽 延迟 批量提交"),
         ("风险/异常处理",   lambda s, t: f"{s} {t} 同步 风险 异常 常见错误 故障排查"),
     ],
     "check_compatibility": [
@@ -1977,7 +2001,16 @@ def synthesize_diagnosis_knowledge(
         "collection": collection or None,
     }
 
+    # 86 号 R4b：BKN 已有内容时，auto 下不再无条件补查 Qdrant（压 diagnose_db_link 延迟）
+    from .config import SEARCH_DB_LINK_QDRANT_SUPPLEMENT
+    _supp = SEARCH_DB_LINK_QDRANT_SUPPLEMENT
+    qdrant_skip = (_supp == "false") or (_supp == "auto" and bool(bkn_context))
+    if qdrant_skip:
+        ctx["search_fn"] = None   # 关闭 QdrantSearchSource；BKN Section/Risk 源不受影响
+    _t0 = time.perf_counter()
+
     dimensions = [r.to_dict() for r in _DIAGNOSIS_REGISTRY.synthesize(ctx)]
+    _t1 = time.perf_counter()
 
     # 收集 Qdrant 引用
     all_references = set()
@@ -1992,7 +2025,7 @@ def synthesize_diagnosis_knowledge(
     # registry 各源打对了集合（QdrantSearchSource.fetch 透传 ctx.collection），
     # 唯独这条补充检索回落到主集合，是 diagnose_db_link 33% 污染的来源。
     total_snippets = sum(len(d.get("snippets", [])) for d in dimensions)
-    if total_snippets < 5:
+    if not qdrant_skip and total_snippets < 5:
         try:
             generic_query = f"{symptom} {db_type} Demo Product 故障排查"
             extra_hits = search_qdrant(generic_query, top_k=top_k + 2, hybrid=SEARCH_HYBRID,
@@ -2022,6 +2055,10 @@ def synthesize_diagnosis_knowledge(
         parts.append(f"错误码 {error_code}")
     parts.append("的排查知识")
     summary = "基于 BKN 分析思路、Skill 能力概要、风险上下文与 Qdrant 多维度检索，整理了 " + "".join(parts) + "，涵盖常见原因、排查步骤、配置检查与日志/工具参考。"
+
+    _t2 = time.perf_counter()
+    logger.info("synthesize_diagnosis_knowledge qdrant_supplement=%s registry_ms=%.1f extra_ms=%.1f bkn=%s",
+                "off" if qdrant_skip else "on", (_t1 - _t0) * 1000, (_t2 - _t1) * 1000, bool(bkn_context))
 
     return {
         "summary": summary,

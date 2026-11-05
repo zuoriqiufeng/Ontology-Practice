@@ -46,7 +46,7 @@ tools_used:
 | **Skill 文本**（`SKILL.md` / `references/**`） | `skill/<name>/**` | Agent **下次加载自动生效**（无需重载 BKN） |
 | **Plugin 代码**（`plugin/*.py`、`constants.py`、`schemas.py`） | `plugin/**` | 需要**重启 Hermes 服务**加载新代码 |
 
-> ⚠️ **热重载作用域更正（2026-10-14 实测，务必按此执行）**：`plugin/scripts/reload.py`
+> ⚠️ **热重载作用域更正（实测，务必按此执行）**：`plugin/scripts/reload.py`
 > **只重建执行它的那个进程**的内存图；**常驻服务进程不会被它刷新**。
 > 所以「BKN 改完只要 reload 一下」是**早已被实测否定的旧口径**——
 > **权威动作 ＝ 重启常驻服务进程**。
@@ -114,7 +114,7 @@ tools_used:
 > | 为接住新现象，新增了 `index` / `matrix` 段或说明性表格 | `_check_section_types`（废止类型，**error**）/ `_check_no_explanatory_tables`（定义段内非实例登记表，**error**） | 实例 → **登记表加行**（`error:*` / `symptom:*` / `dimension:*` 等命名空间 ID）；说明性内容 → **下延 Skill references**（值数据）/ Tool 常量（路由）/ Qdrant（全量知识）。**本体只留值委托指针** |
 > | 新错误码/新症状写成新段或**重建清单表** | `_check_alias_constants`（别名常量里出现边上没有的 ID → error）+ 人工核对 `relations/process_topology.bkn` 的 `suspected_in`/`has_class` 边 | 两步：① `process_topology.bkn` 补边（**边 = 规范 ID 空间权威**）；② `plugin/constants.py` 的 `ERROR_ALIASES`/`SYMPTOM_ALIASES` 加「口语 → 规范 ID」一行；完整 6 属性**查库**（`store:demo-product_collection#错误码 → store:log_patterns_collection#错误码`），**不写进 BKN**（25 号） |
 > | 关系目标写裸名/中文实例名（`-4073`、`risk:脏数据`） | `_check_relation_target_namespace` | `error:<码>` / `risk:<snake_case>`。**B-域对象类用裸名合法**（如 `dbnode`）；**不要用节点名编码角色**（如 `dbnode:source`），角色应表达为边类型 |
-> | 新增了段类型 / 关系类型 / 命名空间前缀但没登记常量（**静默丢弃，不报错**） | 段类型/关系类型未登记 → `_check_section_types` / `_check_relation_file`（**error**）；命名空间注册表幽灵键 → `_check_namespace_registry_consistency`（**error**，批 4-1）；命名空间**清单漏列** → `_check_namespace_inventory_consistency`（**error**，2026-10-14） | 同步登记 `plugin/constants.py`（`VALID_SECTION_TYPES` / `RELATION_TYPES` / `RELATION_TARGET_NAMESPACES`）**并**把新命名空间补进 `bkn/SCHEMA.md` §0.1 的**全量清单**（唯一全文源；漏列 → `_check_namespace_inventory_consistency` **error**）。若结构变了，对应的 Plugin Tool 与 `plugin/schemas.py` **同批**调整（**P-A：Tool 是 BKN 的投影，不是适配器**） |
+> | 新增了段类型 / 关系类型 / 命名空间前缀但没登记常量（**静默丢弃，不报错**） | 段类型/关系类型未登记 → `_check_section_types` / `_check_relation_file`（**error**）；命名空间注册表幽灵键 → `_check_namespace_registry_consistency`（**error**，批 4-1）；命名空间**清单漏列** → `_check_namespace_inventory_consistency`（**error**） | 同步登记 `plugin/constants.py`（`VALID_SECTION_TYPES` / `RELATION_TYPES` / `RELATION_TARGET_NAMESPACES`）**并**把新命名空间补进 `bkn/SCHEMA.md` §0.1 的**全量清单**（唯一全文源；漏列 → `_check_namespace_inventory_consistency` **error**）。若结构变了，对应的 Plugin Tool 与 `plugin/schemas.py` **同批**调整（**P-A：Tool 是 BKN 的投影，不是适配器**） |
 > | 为接住新叫法，把同义词/别名追加到**中央表**或新建分表 | 人工核对 `bkn/SYNONYMS.md` 宿主表 | 别名写进**同址字段**：对象/进程→`objects/*.bkn` frontmatter `aliases:`（进程对象注册集 `PROCESS_IDS`）；动作→`actions/*.bkn` 段内 `- aliases:`；DB→`plugin/constants.py::DB_ALIASES`；症状/错误码/维度→`plugin/constants.py`（`SYMPTOM_ALIASES` / `ERROR_ALIASES` / `DIMENSION_ALIASES`，值数据层，25 号下沉）；场景→`objects/scenario-*.bkn` 关键词行；运维→各 `skill/*/SKILL.md` frontmatter `triggers:`（**不进 BKN**）。**禁止给 lint 加豁免**，也不要换存储格式 |
 > | 凭记忆/文档猜错误码含义或边走法 | `plugin/error_semantics.yaml`（码含义：按日志**消息文本**命中 `dimension:*` 有界语义类别）/ `plugin/edge_semantics.yaml`（边走法/公理：可传递、复合、无向、反查、展开策略） | 含义只在 `error_semantics.yaml` 的**有界语义类别**里定（查不到 → `dimension:unknown`，不许猜）；边怎么走只在 `edge_semantics.yaml` 声明——**不在 Skill/文档里另立一套** |
 >
@@ -162,7 +162,7 @@ tools_used:
 > **新增诊断原则（`rule:*`）**：进 `risks/constraints.bkn`「全局约束与诊断原则」段（与约束同段，`rule:` 前缀，不补边）。
 > **迭代记录**：批次变更写 `90-history/bkn-changelog.md`，不写进 BKN 文件。
 
-## 升级检查清单（2026-10-18 补充）
+## 升级检查清单
 
 - [ ] 新增模块文件是否登记进 `plugin/__init__.py`（工具/守则/中间件分开注册，全部 try/except 降级）
 - [ ] middleware 是否真的落事件（`LOG_DIR=/tmp/x` 跑一次，看 `logs/trajectories/*.jsonl` 是否有 `answer_source`）

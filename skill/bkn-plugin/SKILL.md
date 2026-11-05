@@ -49,7 +49,7 @@ tools_used:
 
 ---
 
-## 设计文档体系（2026-10-18 精简）
+## 设计文档体系
 
 - **工程实施文档**：`doc/build/demo-product-bkn/00-index.md`（现行表；01 架构 / 24 本体 / 30 模块 / 31 工具 / 42 检查单）
 - **优化与台账**：`doc/optimize/00-index.md` + `00-changelog.md`
@@ -111,6 +111,7 @@ demo-product-bkn plugin 有两层不同调用路径：
 4. **新增 Tool 三点铁律** — 必须同时改 `schemas.py` + `tools.py Handler` + `tools.py HANDLERS`
 5. **`search_qdrant_handler` 返回 string 而非 dict** — 不走 `_wrap()` 的 handler 必须 `json.dumps()`
 6. **BM25 索引随 reload 可选重建**（**仅限 BM25 稀疏索引**；`.bkn` 数据更新不能靠它生效——`reload.py` 只重建执行它的短命进程的全局，**常驻服务必须重启进程**） — `reload.py` 默认不重建 BM25；BKN 重新向量化导入 Qdrant 后，用 `python3 -m plugin.scripts.reload --with-bm25` 重置稀疏索引（下次搜索自动重建）
+7. **`prompt_sections.py` 的 RULES 有 1200 字符硬上限，改后需重启 gateway** — `register_system_prompt_section(max_chars=1200)` 在插件加载时快照注册：改 RULES 条目前先 `cd <repo> && python3 -c "import sys; sys.path.insert(0,'.'); from plugin.prompt_sections import RULES; print(len(RULES))"` 实测 ≤1200，**加条目必须改写压缩现有条文腾额度**（不是追加）；落盘后热重载不覆盖它，gateway 重启才生效
 
 ---
 

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import re
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -105,29 +106,32 @@ def classify_official_meaning(text: str) -> dict:
 # 出口仍是 dimension:*。**只有 status=统一 的码可信**——官方含义与仓内说法确为同一件事时，
 # 据表给维度**不是猜**；区分 / 待现场复核 的码如实落 unknown 并把冲突写出来（不选边）。
 _ERROR_CODES: dict | None = None
+_error_codes_lock = threading.Lock()  # 87 O-02
 
 
 def _load_error_codes() -> dict:
     """→ {码或 define: 条目}；缺文件 / 坏 YAML / 缺 yaml 库 → 空表（安全侧，落 unknown）。"""
     global _ERROR_CODES
     if _ERROR_CODES is None:
-        _ERROR_CODES = {}
-        path = Path(__file__).resolve().parent / "error_codes.yaml"
-        try:
-            import yaml  # 局部导入：与 _load_error_semantics 同理由（不引入加载期强耦合）
-            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-            for e in data.get("dimension_map") or []:
-                # 官方表存**数字**（4002），仓内用**负号形态**（-4002）——两种都登记，
-                # 与 resolver._error_code_variants 的机械变体口径一致（否则查不到，静默落 unknown）。
-                code = str(e.get("code") or "").strip()
-                if code:
-                    _ERROR_CODES[code] = e
-                    _ERROR_CODES.setdefault("-" + code.lstrip("-"), e)
-                dfn = str(e.get("define") or "").strip()
-                if dfn:
-                    _ERROR_CODES.setdefault(dfn, e)
-        except Exception:  # noqa: BLE001 —— 缺库/缺文件/坏 YAML 都退化为"无表"（安全侧）
-            _ERROR_CODES = {}
+        with _error_codes_lock:
+            if _ERROR_CODES is None:
+                _ERROR_CODES = {}
+                path = Path(__file__).resolve().parent / "error_codes.yaml"
+                try:
+                    import yaml  # 局部导入：与 _load_error_semantics 同理由
+                    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+                    for e in data.get("dimension_map") or []:
+                        # 官方表存**数字**（4002），仓内用**负号形态**（-4002）——两种都登记，
+                        # 与 resolver._error_code_variants 的机械变体口径一致（否则查不到，静默落 unknown）。
+                        code = str(e.get("code") or "").strip()
+                        if code:
+                            _ERROR_CODES[code] = e
+                            _ERROR_CODES.setdefault("-" + code.lstrip("-"), e)
+                        dfn = str(e.get("define") or "").strip()
+                        if dfn:
+                            _ERROR_CODES.setdefault(dfn, e)
+                except Exception:  # noqa: BLE001 —— 缺库/缺文件/坏 YAML 都退化为"无表"（安全侧）
+                    _ERROR_CODES = {}
     return _ERROR_CODES
 
 

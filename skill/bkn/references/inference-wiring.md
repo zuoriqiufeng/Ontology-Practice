@@ -42,7 +42,7 @@
 | `domains` ＋ `inherited_domains` / `inherited_incoming_domains` | `relations.py` 的 `_inherited_edges()` |
 | `walk_policy`（`traversable` / `stop_at` / `max_depth` / `max_paths`） | `relations.py` 的 `walk()` |
 
-**机检前置拦截**：lint 第 36 项 `_check_edge_semantics_consumers`（2026-10-15，`C-20261015-04`）——
+**机检前置拦截**：lint 第 36 项 `_check_edge_semantics_consumers`（`C-20261015-04`）——
 声明的键在 `plugin/**/*.py`（**不含 tests**）零引用 ⇒ **error**，门禁① 直接拦下。
 
 ### ④ **必须同批带反向注入负例**

@@ -68,7 +68,7 @@ search:
   mini_first_top_k_multiplier: 2     # mini-first 阶段取 top_k * N
   parent_expand_limit_multiplier: 2  # parent_expand 拉取 large 时的 limit 倍数
   # ---- Tool 输出总量预算 (v1.5) ----
-  output_max_chars: 0                # 0=无限制(默认); >0 时 Tool 输出按优先级截断到该字符数
+  output_max_chars: 12000            # 86 号 R1c：0=无限制；12000=按优先级截断大结果（与内部一致）
 
 # ---- RiskGuard (v1.5, P0-4) ----
 risk_guard:

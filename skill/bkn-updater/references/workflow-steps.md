@@ -183,7 +183,7 @@ cp {target_file} {target_file}.bak.{YYYYMMDD}
 	BKNResolver().lookup_operation("reset_rule")                   # alias 命中
 	RelationTraverser().get_skills_for_action("reset_sync_rule")   # → skill:demo-product-rule-manager
 
-完整「改了什么」表与常见新增操作清单见本文件 §1 与 `references/formats.md`（原 `doc/update/add-skill.md`，2026-10-15 随该目录清理）。
+完整「改了什么」表与常见新增操作清单见本文件 §1 与 `references/formats.md`（原 `doc/update/add-skill.md`，随该目录清理）。
 
 ### 关系条目格式
 
@@ -220,7 +220,7 @@ action:{capability} → implements_skill → skill:{skill-name}
 ### 改 Skill 实现（不动 BKN）
 
 > 场景：脚本路径变了 / Python 环境换了 / SDK 版本升级了 / 多了个坑。
-> **不影响 BKN**，只改 Skill 文本——依据件 `原 doc/update/change-skill.md（2026-10-15 清理）`。
+> **不影响 BKN**，只改 Skill 文本——依据件 `原 doc/update/change-skill.md（已清理）`。
 
 四个常见场景，各自改哪里：
 

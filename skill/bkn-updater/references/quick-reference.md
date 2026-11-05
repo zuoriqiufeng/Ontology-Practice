@@ -1,7 +1,7 @@
 # 速查：改什么文件、是否需生效（updater 侧）
 
 > **定位**：updater（本体/Skill/Plugin 三层）改动时的「按场景查表」页。内容取自
-> 原 doc/update/quick-reference.md（2026-10-15 清理）（全表逐字搬运），并**补入热重载作用域更正**（见「三」）。
+> 原 doc/update/quick-reference.md（已清理）（全表逐字搬运），并**补入热重载作用域更正**（见「三」）。
 > **一句话结论**：凡是 **BKN 数据** 或 **Plugin 代码** 的改动，**以重启服务进程为准**；
 > 只改 **Skill 文本**（机制/脚本/环境/版本差异）不进 reload 链，也不需要重启。
 
@@ -51,7 +51,7 @@
 
 ## 三、热重载作用域更正 ★（本页最重要的一节）
 
-**旧表述**（原文 原 doc/update/quick-reference.md（2026-10-15 清理）「热重载命令」节、plugin/CLAUDE.md:60 旧句）：
+**旧表述**（原文 原 doc/update/quick-reference.md（已清理）「热重载命令」节、plugin/CLAUDE.md:60 旧句）：
 「改完 BKN 跑 reload.py 即生效」。
 
 **更正后的本仓口径**：
@@ -173,4 +173,4 @@ python3 scripts/reload.py --with-bm25；且它同样只清**调用进程**的内
 
 ---
 
-*来源：原 doc/update/quick-reference.md（2026-10-15 清理）（逐字搬运）＋ 原 doc/update/release-flow.md（2026-10-15 清理） §3.2 ＋ plugin/CLAUDE.md:61（作用域更正）。*
+*来源：原 doc/update/quick-reference.md（已清理）（逐字搬运）＋ 原 doc/update/release-flow.md（已清理） §3.2 ＋ plugin/CLAUDE.md:61（作用域更正）。*

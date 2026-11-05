@@ -2,7 +2,7 @@
 
 > **定位**：本体推理缺的东西**全部卡在真实案例上**——本页是现场工程师的填表入口，
 > 只规定「哪 9 栏」与「三条硬规则」，判类由维护者做（**填的人不需要懂本体**）。
-> **来源**：原 doc/update/62-case-registration-template.md（2026-10-15 清理）（全文搬运）。
+> **来源**：原 doc/update/62-case-registration-template.md（已清理）（全文搬运）。
 > **依据**：59 号 §3.1（案例登记最小字段）与 §4.1b（单源 → 统一）；配合 65 号「还差什么」总览。
 
 ---
@@ -86,4 +86,4 @@
 
 ---
 
-*来源：原 doc/update/62-case-registration-template.md（2026-10-15 清理）（2026-10-13 创建）。*
+*来源：原 doc/update/62-case-registration-template.md（已清理）（2026-10-13 创建）。*

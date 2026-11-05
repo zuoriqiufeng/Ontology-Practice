@@ -21,7 +21,7 @@ tools_used:
 # BKN 输入与预处理（Intake）
 
 > **定位**：建模**前置**环节——把业务材料变成「可建模的候选清单」，本 Skill **不产出本体元素、不写 .bkn**。
-> **范围澄清（用户 2026-10-15）**：对方所谓的「数据预处理 skill」= OpenBKN 的 bkn-extract / bkn-map / bkn-bind / bkn-backfill
+> **范围澄清（用户裁定）**：对方所谓的「数据预处理 skill」= OpenBKN 的 bkn-extract / bkn-map / bkn-bind / bkn-backfill
 > （材料 → 对象关系抽取 → 属性到字段映射 → 资源绑定 → 回填）。本 Skill **正面覆盖这条数据准备链**，
 > 并说清哪些我们做、哪些我们不做、为什么（逐项对照见 references/extraction-and-binding.md）。
 > **不是什么**：不是 PRD / 访谈体系；不是 Qdrant 灌库脚本（本仓**没有**灌库脚本，见 doc/optimize/24-ontology-build-sources.md 源清单第 8 条）。
@@ -80,7 +80,7 @@ tools_used:
 
 | 模块 | 文件 | 内容 |
 |---|---|---|
-| 成熟度与交接单 | references/input-maturity.md | M0–M3、材料登记、待确认清单、候选三分类、出口（全量承接 原 doc/update/70-requirement-intake.md（2026-10-15 清理）） |
+| 成熟度与交接单 | references/input-maturity.md | M0–M3、材料登记、待确认清单、候选三分类、出口（全量承接 原 doc/update/70-requirement-intake.md（已清理）） |
 | 预处理 | references/preprocessing.md | docx/xlsx→文本、编码与换行、title 保留、category 标注、二进制件、误判 binary 的坑 |
 | 抽取与绑定对照 | references/extraction-and-binding.md | 对方五步（extract / domain / map / bind / backfill）逐项对照我方等价动作与落点 |
 | 空白模板 | references/intake-template.md | 材料登记 / 待确认清单 / 建模清单候选三分类 / 阶段出口 四张空白表 |

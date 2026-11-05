@@ -1,7 +1,7 @@
 # 回执与显示规范（面向人的输出形态）
 
 > **权威地位**：本件是「Skill 与 Agent **面向人**输出时怎么组织信息」的**执行期权威件**；
->   仓库侧原件 `原 doc/update/skill-output-conventions.md（2026-10-15 清理）` 自 2026-10-15 起降为**依据与留档**（对照驱动 G-14 的来源记录）。
+>   仓库侧原件 `原 doc/update/skill-output-conventions.md（已清理）` 现降为**依据与留档**（对照驱动 G-14 的来源记录）。
 > **全仓规则层落点**：`AGENT.md` R-3 是同一规范的 **5 条摘要**，适用于**所有** agent / skill 的对外输出；本件是它的**详解 ＋ 自检清单**。
 > **适用对象**：本 Skill 与其 `references/**`，以及**所有 skill 面向用户的输出**（**不**约束 Tool 返回结构——那是 `plugin/schemas.py` 的事）。
 > **引用纪律**：遵循 `AGENT.md` R-1，本件**不写跨文档 markdown 链接**，引用一律纯文本路径 / 编号。
@@ -45,8 +45,8 @@
 
 - **人读判据（无完全机检）**：本规范管**形态**，属人读判据；仓库侧只有 `doc/build/demo-product-bkn/11-design_rules_checklist.md` 规则 9 的对应勾选项，以及 `AGENT.md` R-3。
 - **机检面边界**：`plugin/scripts/lint_bkn.py` 管的是 BKN 结构与边语义（含第 36 项边语义消费者），**不覆盖回执形态**——故本件不做「机检通过」的宣称。
-- **落地状态**：本件由候选 `C-20261015-07` 落盘（2026-10-15）；此前权威在 `原 doc/update/skill-output-conventions.md（2026-10-15 清理）`（现为留档）。
+- **落地状态**：本件由候选 `C-20261015-07` 落盘；此前权威在 `原 doc/update/skill-output-conventions.md（已清理）`（现为留档）。
 
 ---
 
-*来源：对照 OpenBKN 的显示规范（其 `_shared/display.md`）后**按本仓语境改写**（只取相关部分，不照搬其字段词典表）；仓库侧原件 `原 doc/update/skill-output-conventions.md（2026-10-15 清理）`（对照驱动 G-14，2026-10-14 由 73 号批 E-5 承接）。收口为 skill 侧权威件：2026-10-15（74 号批 S-1 遗留项）。*
+*来源：对照 OpenBKN 的显示规范（其 `_shared/display.md`）后**按本仓语境改写**（只取相关部分，不照搬其字段词典表）；仓库侧原件 `原 doc/update/skill-output-conventions.md（已清理）`（对照驱动 G-14，由 73 号批 E-5 承接）。收口为 skill 侧权威件（74 号批 S-1 遗留项）。*

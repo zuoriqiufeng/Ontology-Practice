@@ -3,7 +3,7 @@
 > **定位**：本文件回答「改完之后怎么送到现场、怎么证明送对了、怎么留痕」——补上更新文档缺失的
 > 分发、前置校验、自检与记录四段。**改什么**由 skill:bkn-updater 回答。
 >
-> **原文来源**：原 doc/update/release-flow.md（2026-10-15 清理）（216 行，27 号批 V-2）。本文件是它的搬运与改写，
+> **原文来源**：原 doc/update/release-flow.md（已清理）（216 行，27 号批 V-2）。本文件是它的搬运与改写，
 > 命令、判据、退出码均照原文；**引用一律纯文本路径**（AGENT.md R-1，不写链接）。
 > **本流程不含任何运行时改动**，冻结期内可执行。
 
@@ -84,7 +84,7 @@ python3 scripts/reload.py
 `--watch` 模式同理（`plugin/scripts/reload.py` 的 `_watch()` 也是独立进程，监听与 reload 都发生在它自己进程内）。
 
 **结论（本仓证据所及）**：要让改动对**常驻服务进程**生效，**以"重启服务进程"为准**。
-旧表述（`plugin/CLAUDE.md:60` "BKN updates do not require Hermes restart"、`原 doc/update/README.md（2026-10-15 清理）`「热重载」节、
+旧表述（`plugin/CLAUDE.md:60` "BKN updates do not require Hermes restart"、`原 doc/update/README.md（已清理）`「热重载」节、
 `plugin/scripts/reload.py:5` 的 docstring）在本仓代码里找不到支撑，**已更正**。
 
 **复现实验（2026-10-10，隔离副本，可照抄）**：常驻进程先 `_init()` 建缓存（34 文件）→ 磁盘新增一个 `.bkn`
@@ -212,4 +212,4 @@ python3 scripts/changeset.py --check --strict
 
 ---
 
-*搬运自 原 doc/update/release-flow.md（2026-10-15 清理）（创建 2026-10-10，27 号批 V-2）；本文件仅为 skill references，不改变生效树。*
+*搬运自 原 doc/update/release-flow.md（已清理）（27 号批 V-2）；本文件仅为 skill references，不改变生效树。*
