@@ -28,6 +28,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from plugin import tools as T  # noqa: E402
+from plugin import mechanism_detect as MD  # 87·O-15: 机制表缓存已随数据层外置
 
 MECH = ROOT / "plugin" / "mechanisms.yaml"
 SEGS = ("candidates", "chain_note", "next_actions", "evidence_gaps",
@@ -41,14 +42,14 @@ class _InjectMech:
         self.mutate = mutate
 
     def __enter__(self):
-        self.saved = T._MECH_CACHE
+        self.saved = MD._MECH_CACHE
         sem = yaml.safe_load(MECH.read_text(encoding="utf-8")) or {}
         self.mutate(sem)
-        T._MECH_CACHE = sem
+        MD._MECH_CACHE = sem
         return self
 
     def __exit__(self, *a):
-        T._MECH_CACHE = self.saved
+        MD._MECH_CACHE = self.saved
         return False
 
 

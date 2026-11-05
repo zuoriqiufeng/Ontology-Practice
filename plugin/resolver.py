@@ -17,7 +17,6 @@ from .constants import (
     EVIDENCE_SOURCES, EVIDENCE_SOURCES_DEFAULT,
 )
 from .relations import RelationTraverser
-from .supplement import search_qdrant, _track_dimension
 
 # ── 错误消息语义规则（32 号：码只作入口，含义进推理链）────────────────────
 # 规则表在 `plugin/error_semantics.yaml`（**有界：≈8 个语义类别，不随码数增长**；不是码表）。
@@ -1959,6 +1958,8 @@ def synthesize_operation_knowledge(
 
     dimensions = []
     all_references: set[str] = set()
+    # 87·O-16: 惰性导入——resolver 顶层不再依赖 supplement（两模块 import 期仅 supplement 惰性依赖 resolver）
+    from .supplement import search_qdrant, _track_dimension
 
     for dim_name, template in _OPERATION_DIMENSION_TEMPLATES:
         query = template(label, capability)

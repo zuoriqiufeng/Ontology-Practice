@@ -36,6 +36,7 @@ from .supplement import _search_chunk_level, _search_mini_first, _expand_parents
 from .bm25 import PATTERN_META_KEYS
 from .constants import DB_ERROR_PREFIXES, SCENARIO_HINTS
 from .config import BKN_ROOT, SEARCH_CHUNK_MODE
+from .mechanism_detect import _leaf_mechanisms, _mech_roots, _mechanisms  # 87·O-15: 机制数据层外置
 
 
 # 全局实例 (Plugin 启动时初始化)
@@ -876,7 +877,7 @@ def _manifest_related_skills() -> list:
         ("skill:demo_product-db-diagnostics", "需要执行 dump 工具深度排查"),
         ("skill:demo_product-log-analyzer", "需要分析规则日志"),
         ("skill:demo_product-diff-op", "需要对比源目两端表数据"),
-        ("skill:demo_product-iadebug", "需要处理 -4002 位点异常"),
+        ("skill:demo_product-iadebug", "需要处理 -4002 位点异常：先对照告警/截图确认 -4002 抛出的源端环节（日志抽取或翻译进程），再按该 skill 定位 REDO 位点并复位"),
     ]
     out = []
     for sid, when in ids:
@@ -2045,24 +2046,6 @@ def check_action_risk_handler(args, **kwargs):
 
 # ========== Tool 13: diagnose_mechanism（54 号 · 裁 2＝C：M-4 输出契约）==========
 
-_MECH_CACHE = None
-
-
-def _mechanisms() -> dict:
-    """读 plugin/mechanisms.yaml（惰性 import yaml，36 号教训；失败退化为 {}）。"""
-    global _MECH_CACHE
-    if _MECH_CACHE is None:
-        try:
-            import yaml
-            from pathlib import Path
-            # 注意 BKN_ROOT 指向**本体目录**（plugin/bkn），不是仓库根 ⇒ 用本文件所在目录
-            p = Path(__file__).resolve().parent / "mechanisms.yaml"
-            _MECH_CACHE = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
-        except Exception:
-            _MECH_CACHE = {}
-    return _MECH_CACHE
-
-
 def _norm_entry(entry: str) -> tuple:
     """入口归一 → (kind, node, note)。与既有 handler 同序：先同址别名、再格式归一。"""
     e = (entry or "").strip()
@@ -2078,21 +2061,6 @@ def _norm_entry(entry: str) -> tuple:
     return "symptom", node, "症状入口（同址别名归一后）"
 
 
-def _leaf_mechanisms() -> list:
-    """**非根类**机制（＝可独立出证的候选池）。
-
-    mechanisms.yaml 的 entry_fields 写明根类「**不独立出证**——它的 confirmed 必须由某个子类的
-    hard 证据支撑」。故根类不进候选池：否则它每次都以一个永远 unknown 的候选出现，与自身声明矛盾
-    （C-20261013-15）。
-    """
-    return [m for m in (_mechanisms().get("mechanisms") or [])
-            if m.get("id") and m.get("kind") != "根类"]
-
-
-def _mech_roots() -> list:
-    """根类机制 id（不作出证，仅用于在输出里说明它们为何缺席）。"""
-    return [m["id"] for m in (_mechanisms().get("mechanisms") or [])
-            if m.get("id") and m.get("kind") == "根类"]
 
 
 def _mech_candidates(targets: list) -> tuple:

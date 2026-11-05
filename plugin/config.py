@@ -282,6 +282,7 @@ _SEARCH_CACHE = SEARCH.get("cache", {})
 SEARCH_CACHE_ENABLED = bool(_SEARCH_CACHE.get("enabled", True))
 SEARCH_CACHE_TTL = _as_int(os.environ.get("SEARCH_CACHE_TTL", _SEARCH_CACHE.get("ttl_seconds", 300)), 300)
 SEARCH_CACHE_MAX = _as_int(os.environ.get("SEARCH_CACHE_MAX", _SEARCH_CACHE.get("max_entries", 256)), 256)
+SEARCH_CACHE_MINI_FIRST = bool(_SEARCH_CACHE.get("mini_first", True))  # 87 O-09: mini_first 主路径缓存开关(默认开)
 # 86 号 R4b：diagnose_db_link 的 Qdrant 补检索闸门（auto | true | false）
 SEARCH_DB_LINK_QDRANT_SUPPLEMENT = str(SEARCH.get("db_link_qdrant_supplement", "auto")).lower()
 

@@ -54,6 +54,28 @@ from .knowledge_registry import (
 # gap_log 逻辑基名（2A: 可配置，默认 <repo>/logs/，env LOG_DIR 可覆盖；
 # 实际文件由 log_gap 写入时按日期派生：gap_log_YYYY-MM-DD.jsonl）
 GAP_LOG_PATH = resolve_log_path("gap_log.jsonl")
+# ===== 87·O-17(D-P2c)：检索兜底流水线的集中决策表（纯数据，不改行为）=====
+# 把所有散落兜底分支的触发判据收束到一处定义；各处 if 分支仅加注释指到规则 id。
+# 验证：scripts/m5_case_replay.py 与改前逐字一致。
+_FALLBACK_RULES = (
+    # 层级: mini_first→standard 回源 / parent 上抛 / reduce 降维 / BM25 补充 / 兜底出空
+    {"id": "FR-1", "layer": "BM25补充",  "trigger": "hybrid=True 时 bm25 全库 + RRF 融合",
+     "action": "bm25+rrf_fusion", "source": "supplement.py:859/1387/1505（search/ chunk_level/ mini_first）"},
+    {"id": "FR-2", "layer": "mini→standard", "trigger": "mini_first 命中但需父 standard 块",
+     "action": "_resolve_standard_batch(点ID反查) → 偏移标注", "source": "supplement.py:1015-（mini_first Phase2/3）"},
+    {"id": "FR-3", "layer": "数量不足补充", "trigger": "结果条数 < top_k 时补搜 standard",
+     "action": "_search_chunk_level([standard], hybrid=True)", "source": "supplement.py:mini_first Phase5"},
+    {"id": "FR-4", "layer": "兜底出空", "trigger": "mini_first 无 mini 命中",
+     "action": "直搜 standard（hybrid 保留 BM25）", "source": "supplement.py:mini_first fallback 分支"},
+    {"id": "FR-5", "layer": "降维/粒度", "trigger": "chunk_level 过滤: mini/standard/image/large_only",
+     "action": "按层级过滤 ANN + BM25 合并", "source": "supplement.py:_search_chunk_level"},
+    {"id": "FR-6", "layer": "缓存覆盖", "trigger": "search 顶层检索可缓存（含 mini_first 主路径）",
+     "action": "retrieval_cache（命中合成 _path 事件，FR 不改）", "source": "retrieval_cache.py + supplement.mini_first(O-09)"},
+    {"id": "FR-7", "layer": "懒加载", "trigger": "bm25 / resolver / 客户端首次使用",
+     "action": "惰性 import+双检锁", "source": "tools.py:289/479/502、resolver/supplement(O-02/O-16)"},
+    {"id": "FR-8", "layer": "内容兜底", "trigger": "BGE 含精确项(-4002/ORA-xxxxx)但 BGE 结果不含",
+     "action": "content_exact+BM25 两路合并(v3.4)", "source": "supplement.py:1458 附近"},
+)
 
 logger = logging.getLogger(__name__)
 from . import retrieval_cache   # 86 号 R1a：检索结果缓存（仅顶层 search_qdrant 装饰，保全叶子检索 _path 观测）
@@ -986,6 +1008,51 @@ def _make_hit_mini(mh: dict, sp: dict) -> dict:
     }
 
 
+def _cache_mini_enabled() -> bool:
+    """87 O-09：mini_first 主路径缓存开关（config search.cache.mini_first，默认开）。"""
+    try:
+        from .config import SEARCH_CACHE_MINI_FIRST
+        return bool(SEARCH_CACHE_MINI_FIRST) and retrieval_cache.enabled()
+    except Exception:
+        return False
+
+
+def _path_cache_hit(path: str, hits) -> None:
+    """87 O-09：命中合成一条检索路径事件（stopped=cache_hit），observability 不塌缩。
+
+    _path_* 只是观测（search_path 事件），不驱动判定，故命中旁路真实检索一并合成即可。
+    """
+    _pc, _ptok = _path_enter()
+    _path_add(path, hits, t0=None, stopped="cache_hit")
+    if _ptok is not None:
+        _path_exit(_pc, _ptok, hits)
+
+
+def _cached_mini_first(fn):
+    """87 O-09：mini_first 主路径缓存（只缓顶层整体结果，不缓叶子 _search_chunk_level）。
+
+    命中仍合成 _path 事件（cache_hit），返回与真实检索相同语义的列表拷贝（O-01 快照）。
+    仅 config search.cache.mini_first 开启时生效。
+    """
+    from functools import wraps
+
+    @wraps(fn)
+    def wrapper(query, top_k=None, client=None, model=None, collection=None):
+        if not _cache_mini_enabled():
+            return fn(query, top_k=top_k, client=client, model=model, collection=collection)
+        key = retrieval_cache.make_key(fn.__name__, query, top_k, collection)
+        hit = retrieval_cache.get(key)
+        if hit is not None:
+            _path_cache_hit("mini_first", hit)
+            return hit
+        out = fn(query, top_k=top_k, client=client, model=model, collection=collection)
+        retrieval_cache.set(key, out)
+        return out
+
+    return wrapper
+
+
+@_cached_mini_first
 def _search_mini_first(
     query: str,
     top_k: int,
@@ -1006,7 +1073,6 @@ def _search_mini_first(
         return []
 
     # 87 O-10: 全流程只编码一次，正式/回源/补充共用同一向量
-    _t_q_emb = time.perf_counter()
     q_emb = model.encode(query).tolist()
 
     # Phase 1: mini ANN（带 BM25 全库 RRF），取 top_k * 2
