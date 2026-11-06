@@ -211,6 +211,35 @@ def _apply_output_budget(result, tool_name, limit=None):
     return result
 
 
+# ===== 88 号 E：diagnose_db_link 交付级瘦身（为 F 的 detail=full 预留）=====
+_DB_LINK_HIT_PREVIEW = 240  # 每条命中交付预览长度；F 预留：detail=full 时 level="full" 返回全文
+
+
+def _compact_link_hits(hits, level="compact"):
+    """把 knowledge_context 里的完整命中裁成交付级预览（E，88 号）。
+
+    level == "full" 原样返回（F 预留：diagnose_db_link 未来加 detail=full 时用）。
+    compact 形态 = {preview, score, source_basename}；丢弃 id/title/rrf_score/chunk_id/chunk_level。
+    ask.py._first_cause 读 content or preview，故 preview 键保持兼容。
+    """
+    if level == "full":
+        return list(hits or [])
+    out = []
+    for h in hits or []:
+        if not isinstance(h, dict):
+            out.append(h)
+            continue
+        content = str(h.get("content") or h.get("preview") or "")
+        src = str(h.get("source") or "")
+        # 保留 content 键（向后兼容契约）但截断交付；丢弃 id/title/rrf_score 等元数据。
+        out.append({
+            "content": content[:_DB_LINK_HIT_PREVIEW],
+            "score": h.get("score", 0),
+            "source": src.rsplit("/", 1)[-1] if src else "",
+        })
+    return out
+
+
 # ========== O-域诊断类闭环（gap 反哺） ==========
 
 # 哪些 Tool 的调用属于「诊断归类」语境——只有这些 Tool 的 gap 才挂 classes 字段。
@@ -1839,7 +1868,7 @@ def diagnose_db_link_handler(args, **kwargs):
     for dim in knowledge.get("dimensions", []):
         kc_key = _DIM_TO_KC_KEY.get(dim.get("name"))
         if kc_key:
-            knowledge_context[kc_key] = dim.get("snippets", [])
+            knowledge_context[kc_key] = _compact_link_hits(dim.get("snippets", []))  # 88 E：交付预览，F 可有 detail=full 返回全文
 
     # knowledge.dimensions 降为轻量引用索引（同 knowledge_snippets 的处理）：
     # 完整 snippets 已保留在 knowledge_context 各维度字段中，此处不再重复全文。
