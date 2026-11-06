@@ -235,7 +235,7 @@ def _compact_link_hits(hits, level="compact"):
         out.append({
             "content": content[:_DB_LINK_HIT_PREVIEW],
             "score": h.get("score", 0),
-            "source": src.rsplit("/", 1)[-1] if src else "",
+            "source": src,  # 88 A2：保留完整来源（bkn:/manifest: 等前缀有溯源意义）
         })
     return out
 
@@ -1758,6 +1758,10 @@ def diagnose_db_link_handler(args, **kwargs):
     raw_db_type = (args.get("db_type") or "auto").strip()
     error_code = args.get("error_code")
     process = (args.get("process") or "").strip()  # 20 号方案：进程入口（进程挂死常无错误码）
+    # 88 A2：detail 控制正文长度（compact=240 截断 / full=原长）；默认 compact
+    _detail = str((args or {}).get("detail") or "compact").strip().lower()
+    if _detail not in ("compact", "full"):
+        _detail = "compact"
 
     if raw_db_type == "auto":
         db_type = _resolve_db_type(error_code)
@@ -1835,19 +1839,14 @@ def diagnose_db_link_handler(args, **kwargs):
     if not note:
         note = f"整理了 {db_type} {symptom or display_symptom} 的排查知识，详情见 knowledge.dimensions。"
 
-    # knowledge_snippets 改为轻量引用索引，避免与 dimensions/knowledge_context 重复完整内容
-    knowledge_snippets = []
-    for dim in knowledge.get("dimensions", []):
-        for idx, snippet in enumerate(dim.get("snippets", [])):
-            knowledge_snippets.append({
-                "dimension": dim.get("name", ""),
-                "index": idx,
-                "preview": snippet.get("content", "")[:120],
-                "score": snippet.get("score", 0),
-                "source": snippet.get("source", ""),
-            })
-
-    # 知识上下文：可直接消费的知识（BKN + Qdrant，保留完整 snippets）
+    # 88 A2：命中只保留一份正文（knowledge_context），dimensions/snippets 只留纯 ref 索引。
+    _DIM_TO_KC_KEY = {
+        "常见原因": "common_causes",
+        "排查步骤": "recommended_steps",
+        "配置检查": "configuration_checks",
+        "日志与工具": "logs_and_tools",
+    }
+    navigation = {"by_dimension": {}, "counts": {}}
     knowledge_context = {
         "analysis_framework": skill_map.get("analysis_framework", ""),
         "skill_capabilities": skill_map.get("skill_capabilities", ""),
@@ -1859,32 +1858,31 @@ def diagnose_db_link_handler(args, **kwargs):
     }
     if bkn_context:
         knowledge_context["bkn_risk_context"] = bkn_context
-    _DIM_TO_KC_KEY = {
-        "常见原因": "common_causes",
-        "排查步骤": "recommended_steps",
-        "配置检查": "configuration_checks",
-        "日志与工具": "logs_and_tools",
-    }
+    _level = "full" if _detail == "full" else "compact"
+    knowledge_snippets = []
+    _dim_index = {}
+    for _di, dim in enumerate(knowledge.get("dimensions", [])):
+        _dname = dim.get("name") or ("dim%d" % (_di + 1))
+        _hits = _compact_link_hits(dim.get("snippets", []), level=_level)
+        _refs, _ref_items = [], []
+        for _hi, _h in enumerate(_hits):
+            _ref = "d%d-%d" % (_di + 1, _hi + 1)
+            _score = _h.get("score", 0) if isinstance(_h, dict) else 0
+            if isinstance(_h, dict):
+                _h["ref"] = _ref
+            _refs.append(_ref)
+            _ref_items.append({"ref": _ref, "score": _score})
+            knowledge_snippets.append({"dimension": _dname, "ref": _ref, "score": _score})
+        _dim_index[_dname] = _ref_items
+        navigation["by_dimension"][_dname] = _refs
+        navigation["counts"][_dname] = len(_refs)
+        # 无固定映射的维度（如 分析思路/Skill 能力概要）用维度名作键，保证正文不丢
+        kc_key = _DIM_TO_KC_KEY.get(dim.get("name")) or _dname
+        knowledge_context[kc_key] = _hits
+    # knowledge.dimensions[*].snippets 也只留 ref（与 knowledge_snippets 同源，无正文重复）
     for dim in knowledge.get("dimensions", []):
-        kc_key = _DIM_TO_KC_KEY.get(dim.get("name"))
-        if kc_key:
-            knowledge_context[kc_key] = _compact_link_hits(dim.get("snippets", []))  # 88 E：交付预览，F 可有 detail=full 返回全文
-
-    # knowledge.dimensions 降为轻量引用索引（同 knowledge_snippets 的处理）：
-    # 完整 snippets 已保留在 knowledge_context 各维度字段中，此处不再重复全文。
-    # 注意：上面 knowledge_context 直接引用了同一批 snippet 对象，所以这里必须
-    # 「重新赋值」而非原地修改——重绑定 dim["snippets"] 会指向新对象，
-    # knowledge_context 仍持有原列表，不会被连带降级。
-    for dim in knowledge.get("dimensions", []):
-        dim["snippets"] = [
-            {
-                "index": idx,
-                "preview": s.get("content", "")[:120],
-                "score": s.get("score", 0),
-                "source": s.get("source", ""),
-            }
-            for idx, s in enumerate(dim.get("snippets", []))
-        ]
+        _dname = dim.get("name") or ""
+        dim["snippets"] = list(_dim_index.get(_dname, []))
 
     # 技能上下文：深入执行时需要加载 Skill 的索引
     skill_context = {
@@ -1941,6 +1939,8 @@ def diagnose_db_link_handler(args, **kwargs):
         "error_code": error_code,
         "knowledge": knowledge,
         "knowledge_context": knowledge_context,
+        "navigation": navigation,
+        "_contract_version": 2,
         "skill_context": skill_context,
         "related_skills": related_skills,
         "recommended_skill": recommended_skill,
