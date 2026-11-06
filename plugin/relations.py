@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import re
-from collections import defaultdict, deque
+from collections import defaultdict
 from pathlib import Path
 
 
@@ -574,7 +574,7 @@ class RelationTraverser:
         stop_at = tuple(policy.get("stop_at") or ())
         max_paths = int(policy.get("max_paths") or 20)
         limit = min(int(depth or 1), int(policy.get("max_depth") or 3))
-        rev = self._reverse_index()
+        self._reverse_index()
 
         paths: list[dict] = []
         seen = {start_id}

@@ -269,7 +269,6 @@ class CodeRowIndex:
                     continue
                 seen.add(key)
                 try:
-                    from .resolver import normalize_error_code
                     canonical = normalize_code(raw)
                 except Exception:  # noqa: BLE001
                     canonical = raw

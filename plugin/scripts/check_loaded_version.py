@@ -80,8 +80,8 @@ def check(loaded_path: Path, version_file: Path, bkn_root: Path | None = None) -
     if loaded_hash == current_hash:
         print(f"✅ 一致：进程加载 == 磁盘现状（hash {current_hash[:16]}…）")
         if disk_hash and disk_hash != current_hash:
-            print(f"  ⚠ 附注：磁盘内容与版本记录不一致（I14）——先跑 "
-                  f"scripts/bkn_version.py --write（本项不判失败）")
+            print("  ⚠ 附注：磁盘内容与版本记录不一致（I14）——先跑 "
+                  "scripts/bkn_version.py --write（本项不判失败）")
         print(f"  {head}")
         return 0
 

@@ -84,6 +84,15 @@ else
   FAILED=1
 fi
 
+# ---- ①b pyflakes（88 号 C1：未用 import / 未定义名 / 未用局部变量守卫）----
+echo "①b 静态检查：pyflakes（非测试源码）"
+if "$PY" -m pyflakes plugin/*.py plugin/scripts/*.py scripts/*.py; then
+  RESULTS+=("✅ ①b pyflakes=0")
+else
+  RESULTS+=("❌ ①b pyflakes 有问题")
+  FAILED=1
+fi
+
 if [ "$LINT_ONLY" = "1" ]; then
   hr
   printf '%s\n' "${RESULTS[@]}"

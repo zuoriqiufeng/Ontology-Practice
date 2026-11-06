@@ -21,7 +21,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -67,7 +66,6 @@ def evaluate(entries: list) -> list[dict]:
     """返回九项结果：{id, name, verdict, metric, action}。"""
     res: list[dict] = []
     span = _span_days(entries)
-    n = len(entries)
 
     def add(did, name, verdict, metric, action):
         res.append({"id": did, "name": name, "verdict": verdict, "metric": metric, "action": action})

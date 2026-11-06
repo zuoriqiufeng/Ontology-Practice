@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 os.environ.setdefault("LOG_DIR", "/tmp/bkn-eval-logs")
 
-from plugin.inject import MARKER, llm_request_middleware  # noqa: E402
+from plugin.inject import llm_request_middleware  # noqa: E402
 
 
 def _question(case: dict) -> str:

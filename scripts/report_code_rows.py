@@ -21,7 +21,6 @@ import argparse
 import glob
 import json
 import statistics
-import sys
 import time
 from collections import defaultdict
 

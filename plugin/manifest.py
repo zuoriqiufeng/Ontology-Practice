@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 MANIFEST_PATH = Path(__file__).resolve().parent / "skill_manifest.yaml"
 

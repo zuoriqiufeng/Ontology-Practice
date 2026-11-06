@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import re
 
-from .cards import build_card
 from .config import _config
 from .constants import SYMPTOM_ALIASES
 

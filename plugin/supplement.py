@@ -54,27 +54,29 @@ from .knowledge_registry import (
 # gap_log 逻辑基名（2A: 可配置，默认 <repo>/logs/，env LOG_DIR 可覆盖；
 # 实际文件由 log_gap 写入时按日期派生：gap_log_YYYY-MM-DD.jsonl）
 GAP_LOG_PATH = resolve_log_path("gap_log.jsonl")
-# ===== 87·O-17(D-P2c)：检索兜底流水线的集中决策表（纯数据，不改行为）=====
-# 把所有散落兜底分支的触发判据收束到一处定义；各处 if 分支仅加注释指到规则 id。
+# ===== 87·O-17 / 88·C2：检索兜底流水线的**索引表**（纯数据/文档，生产分支不读取）=====
+# 用途：让维护者在一处看清「有哪些兜底分支、各自触发判据」，**不是**由表驱动的决策表——
+# 生产判定分支不读它，改此表不会改行为（88 号对 O-17 的纠偏，避免被误读为可配置）。
+# 改动任何分支时请回来同步本表；source 只写**函数名**，不写行号（行号必漂移）。
 # 验证：scripts/m5_case_replay.py 与改前逐字一致。
 _FALLBACK_RULES = (
     # 层级: mini_first→standard 回源 / parent 上抛 / reduce 降维 / BM25 补充 / 兜底出空
     {"id": "FR-1", "layer": "BM25补充",  "trigger": "hybrid=True 时 bm25 全库 + RRF 融合",
-     "action": "bm25+rrf_fusion", "source": "supplement.py:859/1387/1505（search/ chunk_level/ mini_first）"},
+     "action": "bm25+rrf_fusion", "source": "_search_chunk_level / _search_mini_first / search_qdrant"},
     {"id": "FR-2", "layer": "mini→standard", "trigger": "mini_first 命中但需父 standard 块",
-     "action": "_resolve_standard_batch(点ID反查) → 偏移标注", "source": "supplement.py:1015-（mini_first Phase2/3）"},
+     "action": "_resolve_standard_batch(点ID反查) → 偏移标注", "source": "_search_mini_first（Phase2/3）"},
     {"id": "FR-3", "layer": "数量不足补充", "trigger": "结果条数 < top_k 时补搜 standard",
-     "action": "_search_chunk_level([standard], hybrid=True)", "source": "supplement.py:mini_first Phase5"},
+     "action": "_search_chunk_level([standard], hybrid=True)", "source": "_search_mini_first（Phase5）"},
     {"id": "FR-4", "layer": "兜底出空", "trigger": "mini_first 无 mini 命中",
-     "action": "直搜 standard（hybrid 保留 BM25）", "source": "supplement.py:mini_first fallback 分支"},
+     "action": "直搜 standard（hybrid 保留 BM25）", "source": "_search_mini_first（fallback 分支）"},
     {"id": "FR-5", "layer": "降维/粒度", "trigger": "chunk_level 过滤: mini/standard/image/large_only",
-     "action": "按层级过滤 ANN + BM25 合并", "source": "supplement.py:_search_chunk_level"},
+     "action": "按层级过滤 ANN + BM25 合并", "source": "_search_chunk_level"},
     {"id": "FR-6", "layer": "缓存覆盖", "trigger": "search 顶层检索可缓存（含 mini_first 主路径）",
-     "action": "retrieval_cache（命中合成 _path 事件，FR 不改）", "source": "retrieval_cache.py + supplement.mini_first(O-09)"},
+     "action": "retrieval_cache（命中合成 _path 事件，FR 不改）", "source": "retrieval_cache + _search_mini_first(O-09)"},
     {"id": "FR-7", "layer": "懒加载", "trigger": "bm25 / resolver / 客户端首次使用",
-     "action": "惰性 import+双检锁", "source": "tools.py:289/479/502、resolver/supplement(O-02/O-16)"},
+     "action": "惰性 import+双检锁", "source": "_get_qdrant_client / _get_embedding_model / _init"},
     {"id": "FR-8", "layer": "内容兜底", "trigger": "BGE 含精确项(-4002/ORA-xxxxx)但 BGE 结果不含",
-     "action": "content_exact+BM25 两路合并(v3.4)", "source": "supplement.py:1458 附近"},
+     "action": "content_exact+BM25 两路合并(v3.4)", "source": "search_qdrant（content_exact 分支）"},
 )
 
 logger = logging.getLogger(__name__)
@@ -199,7 +201,7 @@ def _path_exit(c, token, final=None) -> None:
             _fields["paths_dropped"] = int(c["dropped"])
         track("search_path", **_fields)
     except Exception:
-        pass
+        logger.warning("search_path 埋点失败（不影响检索）", exc_info=True)
 
 
 # ========== v3.1: 会话级维度覆盖追踪 ==========
@@ -457,7 +459,7 @@ def assess_confidence(result: dict, args: dict, tool_name: str = None) -> tuple[
             track("confidence_why", confidence=conf,
                   checkpoints=list(checkpoints), gap_count=len(gaps_now or []))
         except Exception:
-            pass
+            logger.warning("confidence_why 埋点失败（不影响置信度判定）", exc_info=True)
 
     gaps = []
     if not result or result == {}:
@@ -542,7 +544,7 @@ def _deep_check(result: dict, tool_name: str, checkpoints: list | None = None) -
             if checkpoints is not None:
                 checkpoints.append({"check": "deep_check", "verdict": verdict, "detail": detail})
         except Exception:
-            pass
+            logger.warning("deep_check 检查点记录失败", exc_info=True)
 
     if tool_name == "design_solution":
         rels = result.get("relations", {})

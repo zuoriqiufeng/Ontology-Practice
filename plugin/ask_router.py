@@ -632,10 +632,11 @@ def attach_intents(payload: dict, sigs: list, primary) -> None:
         return
 
 
-def log_route_trace(question, sigs, primary) -> None:
+def log_route_trace(question, sigs, primary, legacy=None) -> None:
     """落一条路由决策 trace（确定性、纯增量，不影响主输出，守 54 号 C）。
 
     仅在 ask_router 启用时调用；记录：抽取到的信号快照 + 命中主意图(route_id/tool/origin)。
+    88 号 A4：primary=None（走 legacy _route 兜底）时补记 legacy 去向，避免 1/3 问句路由不可回溯。
     写入 logs/route_trace_log.jsonl（daily + 大小双维轮转，与 usage/gap 一致）。
     任何异常静默——trace 不得影响主流程。
     """
@@ -667,6 +668,15 @@ def log_route_trace(question, sigs, primary) -> None:
                 "origin": (primary[2] or {}).get("origin"),
                 "confidence": (primary[2] or {}).get("confidence"),
             }
+            entry["route_decision"] = "primary"
+        else:
+            # 88 号 A4：无主通道 → 显式标记并记 legacy 兜底去向（纯增量，不改行为）
+            entry["route_decision"] = "no_primary_legacy_fallback"
+            if legacy:
+                entry["legacy_route"] = {
+                    "tool": legacy[0],
+                    "origin": ((legacy[2] if len(legacy) > 2 else None) or {}).get("origin"),
+                }
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     except Exception:

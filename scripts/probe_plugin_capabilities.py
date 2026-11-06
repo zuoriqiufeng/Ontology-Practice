@@ -9,7 +9,6 @@
 用法：python3 scripts/probe_plugin_capabilities.py [--hermes /usr/local/lib/hermes-agent]
 """
 import argparse
-import inspect
 import json
 import sys
 from pathlib import Path

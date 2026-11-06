@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Optional
+from typing import Optional
 
 from .config import DIAGNOSTIC_KEYWORD_ENDPOINT, DIAGNOSTIC_KEYWORD_TIMEOUT
 

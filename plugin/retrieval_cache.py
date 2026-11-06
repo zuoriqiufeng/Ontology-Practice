@@ -5,11 +5,12 @@
 设计取舍：
 - 覆盖 supplement 层 search_qdrant / _search_mini_first / _search_chunk_level 三个检索入口，
   使「模型直接 search_qdrant」与「diagnose_db_link 内部补充检索」都吃到缓存；
-- 命中返回的是上次结果的列表引用（浅分享），调用方不得原地改写元素结构；
+- 命中返回深拷贝快照（88 号 B1）——调用方原地改嵌套 list/dict 也不会污染缓存与后续命中；
 - 版本热重载（bkn_reload 换版）时由 loaded_version 主动 clear()，避免脏命中。
 """
 from __future__ import annotations
 
+import copy
 import json
 import threading
 import time
@@ -31,10 +32,24 @@ def enabled() -> bool:
     return bool(SEARCH_CACHE_ENABLED)
 
 
+def _stable_part(p):
+    """把 key 参数归一成**跨 reload 稳定**的值（88 号 B2）。
+
+    qdrant client / embedding model 等对象若走 repr 会带内存地址，reload 即变、缓存必失效；
+    这类对象不影响检索结果语义，统一记为 <类型名>。"""
+    if p is None or isinstance(p, (str, int, float, bool)):
+        return p
+    if isinstance(p, (list, tuple)):
+        return [_stable_part(x) for x in p]
+    if isinstance(p, dict):
+        return {k: _stable_part(v) for k, v in sorted(p.items(), key=lambda kv: str(kv[0]))}
+    return "<" + type(p).__name__ + ">"
+
+
 def make_key(*parts) -> str:
-    """稳定 key：对参数做 repr 归一（tuple/list/dict 皆可）。"""
+    """稳定 key：对参数做「稳定归一」（88 号 B2，去对象 repr 的地址漂移）。"""
     try:
-        return json.dumps([repr(p) for p in parts], ensure_ascii=False)
+        return json.dumps([_stable_part(p) for p in parts], ensure_ascii=False)
     except Exception:  # noqa: BLE001
         return repr(parts)
 
@@ -66,7 +81,11 @@ def set(key: str, val) -> None:
 
 
 def _copy_hit(x):
-    return dict(x) if isinstance(x, dict) else x
+    # 88 号 B1：深拷贝——仅顶层 dict(x) 不够，嵌套 list/dict 仍共享引用可跨用例污染。
+    try:
+        return copy.deepcopy(x)
+    except Exception:  # noqa: BLE001
+        return dict(x) if isinstance(x, dict) else x
 
 
 def clear() -> None:

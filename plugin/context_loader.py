@@ -10,7 +10,6 @@
 import json
 import re
 from collections import Counter
-from typing import Any
 
 
 def _json_len(obj):

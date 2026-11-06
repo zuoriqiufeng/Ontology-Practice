@@ -147,7 +147,6 @@ def build():
     dim_map, classified = [], 0
     for key in sorted(codes):
         e = codes[key]
-        num = e["code"] or key
         verdict, note = VERDICTS.get(e["code"], ("", ""))
         # Step A（用户 2026-10-13 裁定 C → A）：**官方含义明确且仓内无相反说法**的码
         # ⇒ status=单源（给维度，但标注单源未经现场验证）。已知误判已由 Step C 的 deny 表清掉。

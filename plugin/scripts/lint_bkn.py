@@ -22,8 +22,8 @@ PROJECT_ROOT = PLUGIN_ROOT.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from plugin.constants import (  # noqa: E402
-    VALID_ATTRIBUTE_TYPES, VALID_RISK_TYPES, VALID_SEVERITY, SEVERITY_LEGACY_MAP,
-    VALID_ACCESS_TYPES, VALID_BINDING_TYPES, VALID_SECTION_TYPES, PROCESS_IDS,
+    VALID_RISK_TYPES, VALID_SEVERITY, SEVERITY_LEGACY_MAP,
+    VALID_ACCESS_TYPES, VALID_BINDING_TYPES, VALID_SECTION_TYPES,
     KNOWN_DBS, DB_ALIASES, DB_ERROR_PREFIXES, is_db_match,
     RELATION_TARGET_NAMESPACES,
 )
@@ -1387,7 +1387,7 @@ class Linter:
             return
         try:
             from plugin.constants import (
-                ERROR_ALIASES, SYMPTOM_ALIASES, DIMENSION_ALIASES, VALID_SECTION_TYPES,
+                ERROR_ALIASES, SYMPTOM_ALIASES, DIMENSION_ALIASES,
             )
         except Exception:
             return
@@ -1445,7 +1445,7 @@ class Linter:
             if re.search(r"^>[ \t]*行[ \t]*=[^\n]*实例", body, re.M):
                 continue
             # ② 行首列全部为命名空间 ID
-            header, rows = table[0], [r for r in table[1:] if any(c.strip() for c in r)]
+            rows = [r for r in table[1:] if any(c.strip() for c in r)]
             if not rows:
                 continue
             first_col = [(r[0] or "").strip() for r in rows]
