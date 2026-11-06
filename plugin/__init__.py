@@ -93,3 +93,11 @@ def register(plugin_api):
     except Exception:
         import logging
         logging.getLogger(__name__).warning("服务自证写入失败（不影响注册）", exc_info=True)
+
+    # 88 A2-fix：后台预热 embedding 模型（不阻塞 register；加载超时由 SEARCH_MODEL_LOAD_TIMEOUT 护栏兜底）
+    try:
+        from .supplement import warmup_embedding_model
+        warmup_embedding_model()
+    except Exception:
+        import logging
+        logging.getLogger(__name__).warning("embedding 预热启动失败（不影响注册）", exc_info=True)

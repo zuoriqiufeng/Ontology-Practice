@@ -24,7 +24,7 @@ from typing import List, Optional
 from .config import (
     QDRANT_HOST, QDRANT_PORT, QDRANT_COLLECTION, QDRANT_TIMEOUT,
     EMB_MODEL_NAME, EMB_DEVICE, EMB_HF_OFFLINE, EMB_HF_HOME,
-    EMBEDDING_DIMENSION,
+    EMBEDDING_DIMENSION, SEARCH_MODEL_LOAD_TIMEOUT,
     SEARCH_TOP_K, SEARCH_SCORE_THRESHOLD, SEARCH_HYBRID,
     SEARCH_FALLBACK_NONE, SEARCH_FALLBACK_PARTIAL,
     SEARCH_PARTIAL_ENRICH, SEARCH_MIN_CONTENT_LENGTH,
@@ -364,6 +364,7 @@ REQUIRED_FIELDS = {
 
 _qdrant_client = None
 _embedding_model = None
+_embedding_model_late = None  # 88 A2-fix：超时后台加载完成后供收养
 _lazy_init_lock = threading.Lock()  # 87 O-02: 懒加载单例双检锁
 _init_warnings: list[str] = []  # 依赖初始化失败/降级原因, 只写一次
 
@@ -424,26 +425,72 @@ def _validate_qdrant_dimension(client, collection_name: str = QDRANT_COLLECTION)
         logger.debug("无法校验 Qdrant collection 维度: %s", e)
 
 
+def _load_embedding_model_with_timeout():
+    """88 A2-fix：后台线程加载模型，最多等 SEARCH_MODEL_LOAD_TIMEOUT 秒。
+
+    超时返回 False（本次降级为无向量检索），后台线程加载完成后写 _embedding_model_late，
+    下次 _get_embedding_model 自动收养——避免慢加载把并发请求无限拖住。
+    """
+    import os
+    holder: dict = {}
+
+    def _do():
+        try:
+            if EMB_HF_HOME:
+                os.environ["HF_HOME"] = EMB_HF_HOME
+            if EMB_HF_OFFLINE:
+                os.environ["HF_HUB_OFFLINE"] = "1"
+            from sentence_transformers import SentenceTransformer
+            holder["model"] = SentenceTransformer(EMB_MODEL_NAME, device=EMB_DEVICE)
+        except ImportError as e:
+            holder["err"] = ("import", e)
+        except Exception as e:
+            holder["err"] = ("load", e)
+
+    t = threading.Thread(target=_do, daemon=True)
+    t.start()
+    t.join(SEARCH_MODEL_LOAD_TIMEOUT)
+    if t.is_alive():
+        def _late():
+            t.join()
+            if holder.get("model") is not None:
+                global _embedding_model_late
+                _embedding_model_late = holder["model"]
+        threading.Thread(target=_late, daemon=True).start()
+        _record_init_warning(f"Embedding 模型加载超时({SEARCH_MODEL_LOAD_TIMEOUT}s)，本次降级")
+        logger.warning("Embedding 模型加载超时(%ss)，本次降级为无向量检索；后台继续加载",
+                       SEARCH_MODEL_LOAD_TIMEOUT)
+        return False
+    if holder.get("err"):
+        kind, e = holder["err"]
+        if kind == "import":
+            _record_init_warning("sentence_transformers 未安装, Embedding 模型不可用")
+        else:
+            _record_init_warning(f"Embedding 模型加载失败: {e}")
+        return False
+    return holder.get("model")
+
+
 def _get_embedding_model():
     global _embedding_model
-    if _embedding_model is None:
-        with _lazy_init_lock:
-            if _embedding_model is None:
-                try:
-                    import os
-                    if EMB_HF_HOME:
-                        os.environ["HF_HOME"] = EMB_HF_HOME
-                    if EMB_HF_OFFLINE:
-                        os.environ["HF_HUB_OFFLINE"] = "1"
-                    from sentence_transformers import SentenceTransformer
-                    _embedding_model = SentenceTransformer(EMB_MODEL_NAME, device=EMB_DEVICE)
-                except ImportError:
-                    _record_init_warning("sentence_transformers 未安装, Embedding 模型不可用")
-                    _embedding_model = False
-                except Exception as e:
-                    _record_init_warning(f"Embedding 模型加载失败: {e}")
-                    _embedding_model = False
+    if _embedding_model is False and _embedding_model_late is not None:
+        _embedding_model = _embedding_model_late
+    if _embedding_model is not None:
+        return _embedding_model if _embedding_model is not False else None
+    with _lazy_init_lock:
+        if _embedding_model is False and _embedding_model_late is not None:
+            _embedding_model = _embedding_model_late
+        if _embedding_model is None:
+            _embedding_model = _load_embedding_model_with_timeout()
     return _embedding_model if _embedding_model is not False else None
+
+
+def warmup_embedding_model():
+    """88 A2-fix：注册期后台预热（不阻塞 register）。"""
+    try:
+        threading.Thread(target=_get_embedding_model, daemon=True).start()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 # ========== L1: 置信度评估 ==========

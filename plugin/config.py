@@ -206,6 +206,8 @@ EMBEDDING_DIMENSION = EMB.get("dimension", 1024)
 EMB_DEVICE = EMB.get("device", "cpu")
 EMB_HF_OFFLINE = EMB.get("hf_offline", True)
 EMB_HF_HOME = EMB.get("hf_home", "")
+# 88 A2-fix：模型首次加载超时护栏（后台线程 + 超时降级，避免慢加载拖住并发请求）
+SEARCH_MODEL_LOAD_TIMEOUT = _as_int(os.environ.get("SEARCH_MODEL_LOAD_TIMEOUT", EMB.get("load_timeout", 60)), 60)
 
 # 搜索配置
 SEARCH = _config.get("search", {})
