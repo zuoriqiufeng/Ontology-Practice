@@ -326,7 +326,7 @@ def main():
         report = "\n".join([
             "# BKN 待补充清单\n",
             f"> 生成日期: {date.today().isoformat()} | 源: {gap_log}"
-            f"（共 {len(gaps)} 条记录，未解决 0 条）"
+            f"（共 {len(gaps)} 条记录，未解决 0 条，已解决 {len(gaps)} 条）"
             f"｜已过滤外来写入者 {foreign} 行（判据：行首 `{{\"tool\": `——带空格）\n",
             "共 0 条缺失——**所有缺失已解决**（本报告由 `scan_gaps.py` 照常重写；"
             "缺口清零不等于停止观测：新缺口会在下次运行前累积出现）\n",
@@ -364,7 +364,7 @@ def main():
     lines = [
         "# BKN 待补充清单\n",
         f"> 生成日期: {date.today().isoformat()} | 源: {gap_log}"
-        f"（共 {len(gaps)} 条记录，未解决 {len(unresolved)} 条）"
+        f"（共 {len(gaps)} 条记录，未解决 {len(unresolved)} 条，已解决 {len(gaps) - len(unresolved)} 条）"
         f"｜已过滤外来写入者 {foreign} 行（判据：行首 `{{\"tool\": `——带空格）\n",
         f"共 {len(unresolved)} 条缺失\n",
     ]

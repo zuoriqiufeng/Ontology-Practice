@@ -63,9 +63,21 @@ def main():
     durs_sorted = sorted(durs)
     d_p50 = statistics.median(durs_sorted) if durs else 0
     d_p95 = (durs_sorted[min(int(len(durs_sorted) * 0.95), len(durs_sorted) - 1)] if durs else 0)  # 87 O-13: 真 p95
+    # 88 A3：15 Tool 覆盖（含零调用档位）
+    _tool_counts = collections.Counter(d.get("tool") for d in calls if d.get("tool"))
+    try:
+        import sys as _sys
+        from pathlib import Path as _Path
+        _sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
+        from plugin.schemas import SCHEMAS as _SCHEMAS
+        _all_tools = [s.get("name") for s in _SCHEMAS if s.get("name")]
+    except Exception:
+        _all_tools = sorted(_tool_counts)
     rows = [
         ("真实会话数", len(sessions)),
         ("调用总数", len(calls)),
+        ("工具覆盖（15 Tool，含零调用）",
+         "；".join("%s=%d" % (n, _tool_counts.get(n, 0)) for n in _all_tools) or "-"),
         ("调用/会话（均值）", round(statistics.mean(per_session), 2) if per_session else 0),
         ("检索调用/会话（search_qdrant+db_link）", round(len(retrieval) / max(len(sessions), 1), 2)),
         ("bkn_ask 后紧跟 search_qdrant", "%d/%d" % (after, n_ask)),

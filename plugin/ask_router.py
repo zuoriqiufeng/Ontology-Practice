@@ -643,11 +643,13 @@ def log_route_trace(question, sigs, primary, legacy=None) -> None:
     try:
         import json
         import time
-        from .config import (LOG_ROTATE_BACKUPS, LOG_ROTATE_ROUTE_TRACE_MAX_BYTES, resolve_log_path)
+        from .config import (LOG_ROTATE_BACKUPS, LOG_ROTATE_ROUTE_TRACE_MAX_BYTES,
+                             LOG_ROTATE_RETENTION_DAYS, resolve_log_path)
         from .log_rotate import rotate_day_file
         path = rotate_day_file(
             resolve_log_path("route_trace_log.jsonl"),
             LOG_ROTATE_ROUTE_TRACE_MAX_BYTES, LOG_ROTATE_BACKUPS,
+            retention_days=LOG_ROTATE_RETENTION_DAYS,
         )
         path.parent.mkdir(parents=True, exist_ok=True)
         entry = {

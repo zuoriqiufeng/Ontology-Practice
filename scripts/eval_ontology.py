@@ -55,6 +55,17 @@ def run(cases: list) -> list:
                 err = "%s: %s" % (type(exc).__name__, exc)
         ms = (time.perf_counter() - t0) * 1000
         hit = any(tok in text for tok in (c.get("expect") or []))
+        # 88 D3：结构断言（存在即覆盖子串判定），支持 contains_code / min_len / not_empty
+        _req = c.get("expect_assert") or {}
+        if _req:
+            _asserted = True
+            if "contains_code" in _req:
+                _asserted = _asserted and (str(_req["contains_code"]) in text)
+            if "min_len" in _req:
+                _asserted = _asserted and (len(text) >= int(_req["min_len"]))
+            if _req.get("not_empty"):
+                _asserted = _asserted and bool(text.strip())
+            hit = _asserted
         try:
             json.loads(text)
             structured_ok = True
