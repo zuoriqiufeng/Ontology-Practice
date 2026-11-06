@@ -212,7 +212,7 @@ def _apply_output_budget(result, tool_name, limit=None):
 
 
 # ===== 88 号 E：diagnose_db_link 交付级瘦身（为 F 的 detail=full 预留）=====
-_DB_LINK_HIT_PREVIEW = 240  # 每条命中交付预览长度；F 预留：detail=full 时 level="full" 返回全文
+_DB_LINK_HIT_PREVIEW = 160  # 88 A3：compact 交付预览长度（240->160）；F 预留：detail=full 返回全文
 
 
 def _compact_link_hits(hits, level="compact"):
@@ -237,6 +237,31 @@ def _compact_link_hits(hits, level="compact"):
             "score": h.get("score", 0),
             "source": src,  # 88 A2：保留完整来源（bkn:/manifest: 等前缀有溯源意义）
         })
+    return out
+
+
+def _compact_log_navigation(ln):
+    """88 A3：压缩 log_navigation 的 analysis_order（去冗余 note、log 截 60、top 6）。
+
+    完整保留 primary / secondary / chain / pattern_library_entry 等顶层键；
+    仅把 analysis_order 每项压成 {process, log[:60]}。"""
+    if not isinstance(ln, dict):
+        return ln
+    out = dict(ln)
+    ao = ln.get("analysis_order")
+    if isinstance(ao, list):
+        out["analysis_order"] = [
+            ({"process": str(x.get("process", "")), "log": str(x.get("log", ""))[:60]}
+             if isinstance(x, dict) else x)
+            for x in ao[:6]
+        ]
+    pd = ln.get("process_duties")
+    if isinstance(pd, dict):
+        out["process_duties"] = {
+            _k: ({"log": str(_v.get("log", ""))[:80], "frequency": _v.get("frequency", "")}
+                 if isinstance(_v, dict) else _v)
+            for _k, _v in pd.items()
+        }
     return out
 
 
@@ -1952,7 +1977,7 @@ def diagnose_db_link_handler(args, **kwargs):
     if process_path:
         result["process_path"] = process_path
     if log_navigation:
-        result["log_navigation"] = log_navigation
+        result["log_navigation"] = _compact_log_navigation(log_navigation)  # 88 A3
     # v3.7: Agent 自主维度选择 — 按症状优先级排序+标注
     available_dims = []
     for dim_name in _get_known_dimensions("diagnose_db_link"):
@@ -1960,7 +1985,7 @@ def diagnose_db_link_handler(args, **kwargs):
         available_dims.append({
             "name": dim_name,
             "priority": priority,
-            "hint": dim_hints.get(dim_name, f"{dim_name} 相关配置参数和命令"),
+            "hint": (dim_hints.get(dim_name) or f"{dim_name} 检索维度")[:48],  # 88 A3 精简
         })
     available_dims.sort(key=lambda d: {"critical": 0, "suggested": 1, "optional": 2}.get(d["priority"], 3))
     result["_search_deferred"] = True
