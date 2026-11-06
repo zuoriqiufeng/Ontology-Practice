@@ -317,8 +317,10 @@ def _track_dimension(dim_name: str, hit_count: int, task_id: str = None):
         return
     key = task_id if task_id is not None else _DEFAULT_DIM_KEY
     with _dim_store_lock:
-        bucket = _DIM_STORE.setdefault(key, {})
+        # 88 D1：访问即移到末尾（LRU 顺序），驱逐最久未访问的非默认桶
+        bucket = _DIM_STORE.pop(key, None) or {}
         bucket[dim_name] = bucket.get(dim_name, 0) + hit_count
+        _DIM_STORE[key] = bucket
         if key != _DEFAULT_DIM_KEY and len(_DIM_STORE) > _DIM_STORE_MAX_TASKS:
             for k in _DIM_STORE:
                 if k != _DEFAULT_DIM_KEY:
@@ -1039,15 +1041,21 @@ def _cached_mini_first(fn):
     from functools import wraps
 
     @wraps(fn)
-    def wrapper(query, top_k=None, client=None, model=None, collection=None):
+    def wrapper(*args, **kwargs):
+        # 88 D5：*args/**kwargs 透传，不再手抄固定形参（被装饰函数加参不会被静默漏传）
         if not _cache_mini_enabled():
-            return fn(query, top_k=top_k, client=client, model=model, collection=collection)
+            return fn(*args, **kwargs)
+        query = args[0] if args else kwargs.get("query")
+        top_k = args[1] if len(args) > 1 else kwargs.get("top_k")
+        collection = args[4] if len(args) > 4 else kwargs.get("collection")
         key = retrieval_cache.make_key(fn.__name__, query, top_k, collection)
         hit = retrieval_cache.get(key)
         if hit is not None:
+            retrieval_cache._track_event("mini_first", "hit")
             _path_cache_hit("mini_first", hit)
             return hit
-        out = fn(query, top_k=top_k, client=client, model=model, collection=collection)
+        retrieval_cache._track_event("mini_first", "miss")
+        out = fn(*args, **kwargs)
         retrieval_cache.set(key, out)
         return out
 

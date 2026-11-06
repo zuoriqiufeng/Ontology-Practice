@@ -26,6 +26,8 @@ _max = max(1, int(SEARCH_CACHE_MAX))
 _lock = threading.Lock()
 # key -> (deadline, list)
 _store: dict = {}
+# 88 B3：命中/未命中计数（供 efficiency_report 与观测）
+_stats = {"hit": 0, "miss": 0}
 
 
 def enabled() -> bool:
@@ -60,11 +62,14 @@ def get(key: str):
     with _lock:
         item = _store.get(key)
         if not item:
+            _stats["miss"] += 1
             return None
         deadline, val = item
         if time.time() >= deadline:
             _store.pop(key, None)
+            _stats["miss"] += 1
             return None
+        _stats["hit"] += 1
         # 87 O-01
         return [_copy_hit(x) for x in val]
 
@@ -78,6 +83,27 @@ def set(key: str, val) -> None:
         if len(_store) > _max:
             oldest = min(_store, key=lambda k: _store[k][0])
             _store.pop(oldest, None)
+
+
+def stats() -> dict:
+    """88 B3：缓存命中/未命中计数快照。"""
+    with _lock:
+        return dict(_stats)
+
+
+def reset_stats() -> None:
+    with _lock:
+        _stats["hit"] = 0
+        _stats["miss"] = 0
+
+
+def _track_event(layer: str, result: str) -> None:
+    """88 B3：发一条缓存命中/未命中观测事件（失败静默，不影响检索）。"""
+    try:
+        from .observability import track
+        track("retrieval_cache", layer=layer, result=result)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def _copy_hit(x):
@@ -103,6 +129,7 @@ def _cached_retrieval(fn):
             return fn(*args, **kwargs)
         key = make_key(fn.__name__, args, kwargs)
         hit = get(key)
+        _track_event(fn.__name__, "hit" if hit is not None else "miss")
         if hit is not None:
             return hit
         out = fn(*args, **kwargs)
