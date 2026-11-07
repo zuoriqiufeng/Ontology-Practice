@@ -87,6 +87,9 @@ def ask(args, **kwargs):
     _init()
     q = str(args.get("question") or "").strip()
     detail = str(args.get("detail") or "summary").strip().lower()
+    # 89 号：意图分级（L0/L1/L2）——纯知识/含锚点/实测变更；供输出与 usage 标注
+    from .tier_router import tier_classify
+    tier, _tier_reason = tier_classify(q)
     cache_key = (kwargs.get("task_id"), q, detail)
     if detail not in ("ref", "full", "all"):
         cached = _cache_get(cache_key)
@@ -121,6 +124,7 @@ def ask(args, **kwargs):
             enrich_items, enrich_err, enrich_top = _enrich(q)
             if enrich_items:
                 payload["enrichment"] = enrich_items
+        payload["tier"] = tier
         out = json.dumps(payload, ensure_ascii=False)
     else:
         raw = HANDLERS[tool](sub)
@@ -136,6 +140,7 @@ def ask(args, **kwargs):
                 enrich_items, enrich_err, enrich_top = _enrich(q)
                 if enrich_items:
                     payload["enrichment"] = enrich_items
+            payload["tier"] = tier
             out = json.dumps(payload, ensure_ascii=False)
     _record(meta, q, out, raw, tool)
     if detail not in ("ref", "full", "all"):
@@ -147,6 +152,7 @@ def ask(args, **kwargs):
                                     "ask_router_enabled": bool(_sigs),
                                     "ask_router_hit": _primary is not None,
                                     "intents": len(_sigs),
+                                    "tier": tier,
                                     "summary_chars": len(out), "raw_chars": len(raw),
                                     "compression": round(len(raw) / max(len(out), 1), 2) if raw else None,
                                     "enrich": len(enrich_items),

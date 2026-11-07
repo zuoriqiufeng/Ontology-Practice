@@ -14,7 +14,9 @@ RULES = """【BKN 本体操作守则】
 7) 多个**互不依赖**的检索需求一次 `search_qdrant(queries=[...])` 发出（≤10 条，每项可带 top_k/chunk_mode）；仅当内容互相依赖时才逐条调用。
 8) `bkn_ask` / `diagnose_*` 返回后，若补查内容已可确定（如码已确定、只补参数），把 `search_qdrant` 与下一条 `diagnose_*` 放进**同一轮** tool_calls 并行发出；内容依赖上一步结果的仍串行。
 9) 诊断开始前列检索计划，已知需求一轮并行发出；工具名以 tool_search/tool_describe 返回为准，禁凭记忆猜名（含 mcp__ 前缀）；备而不用的入口在 skill 分诊命中后立即弃，不补检索。
-10) **少写**：中间轮只输出「命中/失败＋下一步」≤2 句，禁止“证据已齐/时间线已清晰”式过程小结与中间表格——过程细节全部攒到收尾轮一次性给；长文只在收尾轮。**砍字不砍证据**，收尾结论仍带 evidence/meaning 依据。
+10) 少写：中间轮≤2 句，过程细节攒收尾轮一并给；砍字不砍证据，结论仍带 evidence/meaning 依据。
+11) 意图分级：无环境锚点（规则uuid/IP/主机名/日志路径/时间窗）且无实测词（现在/现场/我这边/帮我看下/重启/改/删）且知识型 → L0，只用 BKN 工具链+search_qdrant 作答，禁 i2agent MCP/exec_shell/terminal/读环境路径。
+12) 升级门槛：L0 且 bkn_ask 的 sufficient=true 直接作答收尾，禁追加现场取证；证据不足只输出一句「申请 L1 只读取证 <节点/路径>」并等用户确认，不得自行升级。
 """
 
 
@@ -25,7 +27,7 @@ def register_prompt_sections(plugin_api) -> bool:
             id="bkn-operating-rules",
             content=RULES,
             position="after_memory",
-            max_chars=1200,
+            max_chars=1500,  # 89 号：新增意图分级(11/12)后 1200→1500（按 RULES 实际长度，属可回退变更）
         )
         return True
     except Exception:  # noqa: BLE001 — 老版本平台无此 API
