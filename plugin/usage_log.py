@@ -15,10 +15,13 @@ USAGE_LOG 常量为**逻辑基名**，测试 patch 基名即可）
 from __future__ import annotations
 
 import json
+import logging
 import time
 from pathlib import Path
 
 from .config import resolve_log_path
+
+logger = logging.getLogger(__name__)
 
 USAGE_LOG = resolve_log_path("usage_log.jsonl")  # 逻辑基名；实际文件由 rotate_day_file 按日期派生
 
@@ -42,4 +45,4 @@ def log_usage(tool: str, **fields):
         with open(path, "a", encoding="utf-8") as f:
             f.write(line + "\n")
     except Exception:
-        pass
+        logger.warning("usage_log 写入失败（不影响主流程）", exc_info=True)

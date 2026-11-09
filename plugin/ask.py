@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 import time
 
 from .code_origin import route as route_code
@@ -22,6 +23,7 @@ _NO_TOOL = {"answer": "", "evidence": [], "skills": [], "open": []}
 _CACHE = {}
 _CACHE_TTL = 600
 _CACHE_MAX = 64
+_CACHE_LOCK = threading.Lock()  # 90：bkn_ask 答案缓存加锁（与检索缓存一致）
 
 
 def display_symptom(sid: str) -> str:
@@ -53,16 +55,18 @@ def _first_cause(d: dict) -> str:
 
 
 def _cache_get(key):
-    item = _CACHE.get(key)
-    if item and time.time() - item["ts"] < _CACHE_TTL:
-        return item["out"]
-    return None
+    with _CACHE_LOCK:
+        item = _CACHE.get(key)
+        if item and time.time() - item["ts"] < _CACHE_TTL:
+            return item["out"]
+        return None
 
 
 def _cache_put(key, out: str) -> None:
-    if len(_CACHE) >= _CACHE_MAX:
-        _CACHE.clear()
-    _CACHE[key] = {"ts": time.time(), "out": out}
+    with _CACHE_LOCK:
+        if len(_CACHE) >= _CACHE_MAX:
+            _CACHE.clear()
+        _CACHE[key] = {"ts": time.time(), "out": out}
 
 
 def _route(q: str):
@@ -96,6 +100,7 @@ def ask(args, **kwargs):
         if cached is not None:
             _log_exempt_call("bkn_ask", args, kwargs, cached, cached,
                              usage_fields={"route": "cache", "detail": detail, "cache_hit": True,
+                                            "tier": tier,
                                             "summary_chars": len(cached), "raw_chars": 0},
                              assess=False, confidence="partial")
             return cached
@@ -109,6 +114,8 @@ def ask(args, **kwargs):
         if _primary is not None:
             _shadow_note(q, _primary, meta)
             tool, sub, meta = _primary
+    # 90 号：补齐信号后重算 tier（signal 判级 L1 生效）
+    tier, _tier_reason = tier_classify(q, signals=_sigs)
     raw = ""
     enrich_items, enrich_err, enrich_top = [], "", 0.0
     if tool is None:
@@ -127,7 +134,12 @@ def ask(args, **kwargs):
         payload["tier"] = tier
         out = json.dumps(payload, ensure_ascii=False)
     else:
-        raw = HANDLERS[tool](sub)
+        _sub = sub
+        if tool == "diagnose_db_link" and isinstance(sub, dict) and detail in ("ref", "full", "all"):
+            # 90 D-3：bkn_ask 的 detail=ref/full 需透传给 db_link，否则它仍返 compact
+            _sub = dict(sub)
+            _sub["detail"] = "full"
+        raw = HANDLERS[tool](_sub)
         if detail in ("ref", "full", "all"):
             out = raw
         else:

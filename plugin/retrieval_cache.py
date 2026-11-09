@@ -12,8 +12,11 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 import threading
 import time
+
+logger = logging.getLogger(__name__)
 
 from .config import (
     SEARCH_CACHE_ENABLED,
@@ -103,7 +106,7 @@ def _track_event(layer: str, result: str) -> None:
         from .observability import track
         track("retrieval_cache", layer=layer, result=result)
     except Exception:  # noqa: BLE001
-        pass
+        logger.warning("retrieval_cache._track_event 失败（命中埋点）", exc_info=True)
 
 
 def _copy_hit(x):

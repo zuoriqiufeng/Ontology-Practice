@@ -37,9 +37,12 @@
 from __future__ import annotations
 
 import contextvars
+import logging
 import re
 import time
 from contextlib import contextmanager
+
+logger = logging.getLogger(__name__)
 
 #: 单次调用的事件数上限（44 号 §3.4-2）：超出丢弃，并在该次调用的每条事件里记 dropped。
 MAX_EVENTS = 10
@@ -522,7 +525,7 @@ def track(event: str, **fields) -> None:
             return
         buf.append({"event": event, **fields})
     except Exception:
-        pass
+        logger.warning("observability.track 失败（埋点旁路）", exc_info=True)
 
 
 #: 每次调用最多记多少条 mention 解析事件（防事件洪水；43 号 §7 D11）
@@ -606,4 +609,4 @@ def _flush(c: dict) -> None:
             log_event(**fields, task_id=c["task_id"], event=event,
                       dropped=c.get("dropped") or 0)
     except Exception:
-        pass
+        logger.warning("observability._flush 失败（trajectory 写入）", exc_info=True)

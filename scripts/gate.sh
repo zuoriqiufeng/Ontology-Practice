@@ -93,6 +93,15 @@ else
   FAILED=1
 fi
 
+# ---- ①c 意图分级验收（89/90 号：tier_classify 回归）----
+echo "①c 意图分级：scripts/check_tier.py"
+if "$PY" scripts/check_tier.py >/dev/null 2>&1; then
+  RESULTS+=("✅ ①c check_tier 通过")
+else
+  RESULTS+=("❌ ①c check_tier 失败")
+  FAILED=1
+fi
+
 if [ "$LINT_ONLY" = "1" ]; then
   hr
   printf '%s\n' "${RESULTS[@]}"

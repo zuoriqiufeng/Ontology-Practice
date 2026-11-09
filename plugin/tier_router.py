@@ -31,14 +31,31 @@ def _has_look(text: str) -> bool:
     return any(w in text for w in C.TIER_LOOK_WORDS)
 
 
+def _has_knowledge_q(text: str) -> bool:
+    return any(w in text for w in C.TIER_KNOWLEDGE_Q_WORDS)
+
+
+def _has_imperative(text: str) -> bool:
+    return any(w in text for w in C.TIER_IMPERATIVE_WORDS)
+
+
 def tier_classify(text: str, signals=None) -> tuple:
-    """返回 (tier, reason)。signals = ask_router.extract_all 的信号列表（可选，提升判级）。"""
+    """返回 (tier, reason)。signals = ask_router.extract_all 的信号列表（可选）。
+
+    90 号修正：变更词遇疑问型知识问让位（「执行失败怎么排查」不当 L2）；
+    变更词+查看词且非祈使 → 只读查证 L1；真变更（非疑问）→ L2。
+    """
     t = str(text or "")
-    if _has_change(t):
-        return ("L2", "含变更/实测意图词")
+    change = _has_change(t)
+    look = _has_look(t)
+    anchor = _has_env_anchor(t)
     kinds = {getattr(s, "kind", "") for s in (signals or [])}
+    if change and not _has_knowledge_q(t):
+        if look and not _has_imperative(t):
+            return ("L1", "变更词+查看且非祈使→只读查证")
+        return ("L2", "含变更/操作意图")
     if kinds & {"entity", "log_pattern"}:
         return ("L1", "命中环境实体/日志模式信号")
-    if _has_look(t) or _has_env_anchor(t):
+    if look or anchor:
         return ("L1", "只读看/查或含环境锚点")
     return ("L0", "纯知识问答")

@@ -15,7 +15,7 @@ RULES = """【BKN 本体操作守则】
 8) `bkn_ask` / `diagnose_*` 返回后，若补查内容已可确定（如码已确定、只补参数），把 `search_qdrant` 与下一条 `diagnose_*` 放进**同一轮** tool_calls 并行发出；内容依赖上一步结果的仍串行。
 9) 诊断开始前列检索计划，已知需求一轮并行发出；工具名以 tool_search/tool_describe 返回为准，禁凭记忆猜名（含 mcp__ 前缀）；备而不用的入口在 skill 分诊命中后立即弃，不补检索。
 10) 少写：中间轮≤2 句，过程细节攒收尾轮一并给；砍字不砍证据，结论仍带 evidence/meaning 依据。
-11) 意图分级：无环境锚点（规则uuid/IP/主机名/日志路径/时间窗）且无实测词（现在/现场/我这边/帮我看下/重启/改/删）且知识型 → L0，只用 BKN 工具链+search_qdrant 作答，禁 i2agent MCP/exec_shell/terminal/读环境路径。
+11) 意图分级：问题无环境锚点（规则uuid/IP/主机名/日志路径/时间窗）、无操作/变更词、且属知识型 → L0，只用 BKN 工具链+search_qdrant 作答，禁 i2agent MCP/exec_shell/terminal/读环境路径；锚点/变更词以 constants 单源为准（勿另抄词表）。
 12) 升级门槛：L0 且 bkn_ask 的 sufficient=true 直接作答收尾，禁追加现场取证；证据不足只输出一句「申请 L1 只读取证 <节点/路径>」并等用户确认，不得自行升级。
 """
 
