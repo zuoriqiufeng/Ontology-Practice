@@ -1972,9 +1972,9 @@ def diagnose_db_link_handler(args, **kwargs):
                      if _get_dimension_priority(symptom_str, d) == "critical"]
     _model_hint = (
         "CRITICAL_READ: 顶层 must_know 汇总了关键参数、错误码、路径与开关值；"
-        "knowledge_context 保留了完整可读的排查知识（common_causes / recommended_steps / "
-        "configuration_checks / logs_and_tools）。请完整阅读 configuration_checks 中的配置项，"
-        "并逐条列出 common_causes 与 logs_and_tools，不要合并为一句话概括。"
+        "knowledge_context 在 detail=full 时为完整可读正文；默认 detail=compact 每条仅 160 字预览，"
+        "按命中 ref 取正文。请阅读 configuration_checks 中的配置项，"
+        "并逐条列出 common_causes 与 logs_and_tools，不要合并为一句话概括；需全文用 detail=full。"
         "DIMENSION_SEARCH: _available_dimensions 按优先级标注了 critical/suggested/optional，"
         "你必须至少搜索所有 critical 维度（共{0}个: {1}），"
         "建议继续搜索 suggested 维度以获得完整排查覆盖。".format(

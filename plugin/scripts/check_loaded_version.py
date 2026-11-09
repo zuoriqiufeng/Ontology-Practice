@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -33,7 +34,7 @@ REPO_ROOT = PLUGIN_DIR.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from plugin.loaded_version import LOADED_VERSION_FILE, _import_bkn_version  # noqa: E402
+from plugin.loaded_version import LOADED_VERSION_FILE, _import_bkn_version, _plugin_fingerprint  # noqa: E402
 
 
 def _disk_content_hash(bkn_root: Path):
@@ -67,6 +68,27 @@ def check(loaded_path: Path, version_file: Path, bkn_root: Path | None = None) -
     if loaded.get("hash_error"):
         print(f"⚠ 自证时 hash 计算失败：{loaded['hash_error']}")
         return 2
+
+    # 91 号（P2-O2）：自证来自的进程是否还活着——只比 hash 会被已死 PID 掩盖
+    _pid = loaded.get("process")
+    try:
+        _pid_alive = bool(_pid) and (os.kill(int(_pid), 0) is not None or True)
+    except ProcessLookupError:
+        _pid_alive = False
+    except Exception:  # PermissionError 等：进程存在但不可判，按存活处理
+        _pid_alive = True
+    if not _pid_alive:
+        print(f"✗ 自证来自已退出进程（pid {_pid}）：当前常驻进程版本未知 → 重启后复核")
+        return 1
+
+    # 91 号（P1-O1）：插件运行态指纹——常驻进程跑的是不是磁盘这份插件代码
+    _loaded_pf = loaded.get("plugin_fingerprint")
+    _cur_pf = _plugin_fingerprint()
+    if _loaded_pf and _cur_pf and _loaded_pf != _cur_pf:
+        print("✗ 插件代码已变、运行态未重启（plugin_fingerprint 不一致）")
+        print(f"  记录：{str(_loaded_pf)[:16]}…｜磁盘：{str(_cur_pf)[:16]}…")
+        print("  → 重启常驻 Hermes/插件进程后重跑本检查")
+        return 1
 
     loaded_hash = str(loaded.get("version_hash") or "")
     root = bkn_root or Path(loaded.get("bkn_root") or (REPO_ROOT / "bkn"))

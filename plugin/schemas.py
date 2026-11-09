@@ -7,7 +7,7 @@ SCHEMAS = [{'name': 'query_product',
                                                     'advantages',
                                                     'competitors',
                                                     'industries',
-                                                    'xinchuang',
+                                                    'xinchuang', 'scenarios', 'performance',
                                                     'all'],
                                            'description': '查询方面: overview=概述, positioning=产品定位, '
                                                           'advantages=核心优势（本体层）, scenarios=适用场景（本体层）; '
