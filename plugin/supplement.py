@@ -54,9 +54,11 @@ from .knowledge_registry import (
 # gap_log 逻辑基名（2A: 可配置，默认 <repo>/logs/，env LOG_DIR 可覆盖；
 # 实际文件由 log_gap 写入时按日期派生：gap_log_YYYY-MM-DD.jsonl）
 GAP_LOG_PATH = resolve_log_path("gap_log.jsonl")
-# ===== 87·O-17 / 88·C2：检索兜底流水线的**索引表**（纯数据/文档，生产分支不读取）=====
+# ===== 87·O-17 / 88·C2 / 90：检索兜底流水线的**索引表**（纯数据/文档，生产分支不读取）=====
 # 用途：让维护者在一处看清「有哪些兜底分支、各自触发判据」，**不是**由表驱动的决策表——
 # 生产判定分支不读它，改此表不会改行为（88 号对 O-17 的纠偏，避免被误读为可配置）。
+# 90 澄清：真正被生产读取的是 plugin/risk_guard.py 的 _FALLBACK_RULES（风险门禁）；本表仅
+# 供测试 test_fallback_table.py 断言结构与维护者查阅，属**文档索引**，非取数源。
 # 改动任何分支时请回来同步本表；source 只写**函数名**，不写行号（行号必漂移）。
 # 验证：scripts/m5_case_replay.py 与改前逐字一致。
 _FALLBACK_RULES = (
@@ -1099,9 +1101,11 @@ def _cached_mini_first(fn):
         hit = retrieval_cache.get(key)
         if hit is not None:
             retrieval_cache._track_event("mini_first", "hit")
+            retrieval_cache.log_cache_event("mini_first", "hit")
             _path_cache_hit("mini_first", hit)
             return hit
         retrieval_cache._track_event("mini_first", "miss")
+        retrieval_cache.log_cache_event("mini_first", "miss")
         out = fn(*args, **kwargs)
         retrieval_cache.set(key, out)
         return out

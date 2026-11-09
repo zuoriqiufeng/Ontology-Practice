@@ -275,6 +275,10 @@ ASK_ENRICH_TOPK = _as_int(os.environ.get("ASK_ENRICH_TOPK", "2"), 2)
 ASK_ENRICH_MIN_SCORE = _as_float(os.environ.get("ASK_ENRICH_MIN_SCORE", "0.35"), 0.35)
 ASK_ENRICH_CHARS = _as_int(os.environ.get("ASK_ENRICH_CHARS", "600"), 600)
 
+# 90 号：search_qdrant 外层硬超时（秒；0=不启用）。防单次调用被 connect 超长尾拖住。
+SEARCH_QDRANT_HARD_TIMEOUT = _as_int(
+    os.environ.get("SEARCH_QDRANT_HARD_TIMEOUT", SEARCH.get("hard_timeout", 30)), 30
+)
 SEARCH_OUTPUT_MAX_CHARS = _as_int(
     os.environ.get("SEARCH_OUTPUT_MAX_CHARS", SEARCH.get("output_max_chars", 12000)), 12000
 )  # 86 号 R1c：无 config.yaml 键时默认 12000（内部与 OSS 一致）

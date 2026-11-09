@@ -10,6 +10,7 @@
 """
 from __future__ import annotations
 
+import contextvars
 import copy
 import json
 import logging
@@ -31,6 +32,12 @@ _lock = threading.Lock()
 _store: dict = {}
 # 88 B3：命中/未命中计数（供 efficiency_report 与观测）
 _stats = {"hit": 0, "miss": 0}
+# 90：会话上下文（由 tools._timed_handler 在真入口灌入），供缓存命中写 usage 时带 task/session
+_SESS = contextvars.ContextVar("bkn_retrieval_cache_sess", default=None)
+
+
+def set_session_context(sess) -> None:
+    _SESS.set(dict(sess or {}))
 
 
 def enabled() -> bool:
@@ -109,6 +116,21 @@ def _track_event(layer: str, result: str) -> None:
         logger.warning("retrieval_cache._track_event 失败（命中埋点）", exc_info=True)
 
 
+def log_cache_event(layer: str, result: str) -> None:
+    """90 B3：缓存命中/未命中落 usage（record_type=cache_hit/cache_miss，带会话字段）。"""
+    try:
+        from .usage_log import log_usage
+        s = _SESS.get() or {}
+        fields = {"record_type": "cache_" + result, "layer": layer}
+        if s.get("task_id"):
+            fields["task_id"] = s["task_id"]
+        if s.get("session_id"):
+            fields["session_id"] = s["session_id"]
+        log_usage("search_qdrant", **fields)
+    except Exception:  # noqa: BLE001
+        logger.warning("retrieval_cache.log_cache_event 失败（命中率埋点）", exc_info=True)
+
+
 def _copy_hit(x):
     # 88 号 B1：深拷贝——仅顶层 dict(x) 不够，嵌套 list/dict 仍共享引用可跨用例污染。
     try:
@@ -133,6 +155,7 @@ def _cached_retrieval(fn):
         key = make_key(fn.__name__, args, kwargs)
         hit = get(key)
         _track_event(fn.__name__, "hit" if hit is not None else "miss")
+        log_cache_event(fn.__name__, "hit" if hit is not None else "miss")
         if hit is not None:
             return hit
         out = fn(*args, **kwargs)

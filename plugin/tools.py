@@ -388,6 +388,31 @@ def _usage_metrics(final) -> dict:
     return metrics
 
 
+def _run_with_deadline(fn, timeout_s, *a, **k):
+    """90 号：整体 deadline 包装（超时返回 (False, None)）。
+
+    用 copy_context 复制调用上下文，保证 worker 线程内的 ContextVar（observability._CALL
+    缓冲、会话标识）与主线程一致；超时后 shutdown(wait=False) 不阻塞返回（后台线程自然结束）。
+    """
+    try:
+        _to = float(timeout_s)
+    except (TypeError, ValueError):
+        _to = 0.0
+    if _to <= 0:
+        return True, fn(*a, **k)
+    import concurrent.futures as _cf
+    import contextvars as _cv
+    _ctx = _cv.copy_context()
+    _ex = _cf.ThreadPoolExecutor(max_workers=1)
+    _fut = _ex.submit(_ctx.run, fn, *a, **k)
+    try:
+        return True, _fut.result(timeout=_to)
+    except _cf.TimeoutError:
+        return False, None
+    finally:
+        _ex.shutdown(wait=False)
+
+
 def _timed_handler(fn, tool_name=None):
     """Handler **真入口**包装：① duration 起点；② 过程级观测作用域；③ 进程级版本观测。
 
@@ -413,6 +438,23 @@ def _timed_handler(fn, tool_name=None):
         except Exception:      # 自证/观测不得影响主流程（loaded_version 内部已静默，此为双保险）
             pass
         with _call_scope(name, kwargs):
+            # 90 B3：会话标识灌进检索缓存，供 cache_hit/miss 的 usage 带 task/session
+            try:
+                from . import retrieval_cache as _rc
+                _rc.set_session_context(_session_ctx(kwargs))
+            except Exception:
+                pass
+            # 90：search_qdrant 外层硬超时（防 connect 超长尾拖住整次调用）
+            if name == "search_qdrant":
+                try:
+                    from .config import SEARCH_QDRANT_HARD_TIMEOUT as _to
+                except Exception:
+                    _to = 0
+                _ok, _val = _run_with_deadline(fn, int(_to), args, **kwargs)
+                if _ok:
+                    return _val
+                return json.dumps({"error": "search_qdrant 超时(%ss)，已中止等待" % _to,
+                                   "hint": "可缩小 top_k 或改用 compact"}, ensure_ascii=False)
             return fn(args, **kwargs)
     return wrapper
 
