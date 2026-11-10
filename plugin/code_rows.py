@@ -31,13 +31,9 @@ _MAX_ROW_TEXT = max(80, int(CODE_ROW_MAX_CHARS))
 
 def normalize_code(raw: str) -> str:
     """码的机械归一：4217 -> -4217；ORA1555/ora-1555 -> ORA-01555；其它原样。"""
-    s = (raw or "").strip()
-    if re.fullmatch(r"[0-9]{4}", s):
-        return "-" + s
-    m = re.fullmatch(r"(ORA|YAS)-?([0-9]{4,5})", s, re.IGNORECASE)
-    if m:
-        return "%s-%s" % (m.group(1).upper(), m.group(2).zfill(5))
-    return s
+    # 93 号批3：与 resolver.normalize_error_code 单一事实源，口径不再分叉（ORA+YAS/fullmatch）
+    from .resolver import BKNResolver
+    return BKNResolver.normalize_error_code(raw)
 _MAX_TOTAL_REFS = 200_000
 
 

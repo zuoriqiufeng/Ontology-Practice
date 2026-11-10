@@ -62,11 +62,10 @@ def registry() -> list:
 
 
 def _config() -> dict:
-    """读取 plugin/config.yaml 的 ask_router 段（懒加载；异常回退空）。"""
+    """ask_router 配置——复用 config.py 的单一加载（93 号收口：不再自行读 yaml）。"""
     try:
-        import yaml
-        cfg = yaml.safe_load((_HERE / "config.yaml").read_text(encoding="utf-8")) or {}
-        return cfg.get("ask_router") or {}
+        from .config import _config as _cfg
+        return dict(_cfg.get("ask_router") or {})
     except Exception:
         return {}
 

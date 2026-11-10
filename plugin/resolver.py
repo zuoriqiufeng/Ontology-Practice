@@ -767,9 +767,9 @@ class BKNResolver:
         code = (code or "").strip()
         if re.match(r"^[0-9]{4}$", code):
             return f"-{code}"
-        m = re.match(r"^ORA-?([0-9]{4,5})$", code, re.IGNORECASE)
+        m = re.match(r"^(ORA|YAS)-?([0-9]{4,5})$", code, re.IGNORECASE)
         if m:
-            return f"ORA-{m.group(1).zfill(5)}"
+            return f"{m.group(1).upper()}-{m.group(2).zfill(5)}"
         return code
 
     # ========== 解析工具 ==========
