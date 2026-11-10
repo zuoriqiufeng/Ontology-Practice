@@ -102,6 +102,11 @@ else
   FAILED=1
 fi
 
+# ---- ①d config 三方漂移提醒（91 号；只提醒不阻断）----
+echo "①d config 漂移提醒：scripts/check_config_drift.py"
+"$PY" scripts/check_config_drift.py 2>/dev/null | head -4
+RESULTS+=("ℹ ①d config 漂移（见上，不阻断）")
+
 if [ "$LINT_ONLY" = "1" ]; then
   hr
   printf '%s\n' "${RESULTS[@]}"
