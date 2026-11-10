@@ -178,6 +178,33 @@ def _fetch_symptom(text, *, message="", db_hint="", log_source=""):
     return hits
 
 
+# 91 号：通用词不参与中文症状归一（否则「增量同步失败」会被归一成 crash_loop，入口偏失）
+_GENERIC_SYMPTOM_ALIASES = frozenset((
+    "失败", "报错", "挂了", "出错", "超时", "不通", "连不上", "连不通",
+    "连接失败", "crash", "进程退出", "起不来",
+))
+
+
+def canonical_symptom(text: str) -> str:
+    """把现场中文说法归一为规范症状 ID；无匹配返回原串。
+
+    只做「最长且非通用」的别名命中：通用词（失败/报错/超时…）不触发，避免把
+    「增量同步失败」这类短语误归一成 crash_loop（91 号 ux 审计发现的劫持面）。
+    """
+    from .constants import SYMPTOM_ALIASES
+    t = str(text or "").strip()
+    if not t:
+        return t
+    best = None
+    for alias in sorted(SYMPTOM_ALIASES, key=len, reverse=True):
+        if not alias or alias in _GENERIC_SYMPTOM_ALIASES:
+            continue
+        if alias in t:
+            best = alias
+            break
+    return SYMPTOM_ALIASES[best] if best else t
+
+
 def _fetch_entity(text, *, message="", db_hint="", log_source=""):
     from .constants import DIMENSION_ALIASES
     R = _resolver()

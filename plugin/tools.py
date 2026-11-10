@@ -1822,6 +1822,12 @@ def diagnose_db_link_handler(args, **kwargs):
     """
     _init()
     symptom = args.get("symptom", "")
+    # 91 号：中文症状归一到规范 ID（避开通用词劫持，如「增量同步失败」不映射 crash_loop）
+    try:
+        from .ask_router import canonical_symptom as _canon_symptom
+        symptom = _canon_symptom(symptom)
+    except Exception:
+        pass
     raw_db_type = (args.get("db_type") or "auto").strip()
     error_code = args.get("error_code")
     process = (args.get("process") or "").strip()  # 20 号方案：进程入口（进程挂死常无错误码）

@@ -264,8 +264,9 @@ RISK_GUARD_ENABLED = os.environ.get(
     "RISK_GUARD_ENABLED", str(RISK_GUARD.get("enabled", True))
 ).lower() == "true"
 # block=false → 只记录日志不阻断（灰度）; block=true → pre_tool_call 返回 block 消息
+# 91 号（安全 F-2）：缺 config.yaml 键时**默认阻断**（防御性；yaml 已为 block:true）
 RISK_GUARD_BLOCK = os.environ.get(
-    "RISK_GUARD_BLOCK", str(RISK_GUARD.get("block", False))
+    "RISK_GUARD_BLOCK", str(RISK_GUARD.get("block", True))
 ).lower() == "true"
 
 # Tool 输出总量预算 (v1.5): 0=无限制(默认); >0 时按优先级截断
