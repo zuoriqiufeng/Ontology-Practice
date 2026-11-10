@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gate.sh — 单一门禁入口（22 号批 1-3）
 #
-# 顺序执行四道门，任一道失败即非零退出码（可被 CI 复用，见 22 号批 1-4/Q3）：
+# 顺序执行各道门（⓪/⓪b/⓪c/①/①b/①c/②/③/④/⑤/⑥ + 汇总），任一道失败即非零退出码（可被 CI 复用，见 22 号批 1-4/Q3）：
 #   ① 结构门禁   lint_bkn.py --error-only        errors 必须为 0
 #   ② 回归门禁   pytest plugin/tests -q          全绿（内含方向层 §7 五项阈值断言）
 #   ③ 结构量门禁 graph_metrics --compare         只增不减（16 号 §5 不变量 2）

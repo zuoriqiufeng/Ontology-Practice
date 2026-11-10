@@ -450,7 +450,7 @@ def _timed_handler(fn, tool_name=None):
                     from .config import SEARCH_QDRANT_HARD_TIMEOUT as _to
                 except Exception:
                     _to = 0
-                _ok, _val = _run_with_deadline(fn, int(_to), args, **kwargs)
+                _ok, _val = _run_with_deadline(fn, _to, args, **kwargs)
                 if _ok:
                     return _val
                 return json.dumps({"error": "search_qdrant 超时(%ss)，已中止等待" % _to,
