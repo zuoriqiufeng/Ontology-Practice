@@ -1,0 +1,9 @@
+PyYAML>=6.0
+
+[dev]
+pytest>=7.0
+
+[retrieval]
+qdrant-client>=1.7
+sentence-transformers>=2.2
+jieba>=0.42

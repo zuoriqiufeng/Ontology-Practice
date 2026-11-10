@@ -1,0 +1,3 @@
+[console_scripts]
+bkn-lint = plugin.scripts.lint_bkn:main
+bkn-metrics = plugin.scripts.graph_metrics:main
