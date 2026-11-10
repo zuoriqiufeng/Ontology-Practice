@@ -143,15 +143,15 @@ def reset_for_tests() -> None:
 def _plugin_fingerprint() -> str | None:
     """91 号（P1-O1）：插件运行态指纹。
 
-    对 plugin/*.py、plugin/*.yaml（含 config.yaml）按「文件名+内容」累计 sha1——用于回答
-    「常驻进程跑的是不是磁盘上这份插件代码」。失败返回 None（自证降级，不阻断）。
+    对 plugin/**/*.py、plugin/**/*.yaml（含 config.yaml，递归覆盖子包）按「相对路径+内容」累计 sha1——
+    用于回答「常驻进程跑的是不是磁盘上这份插件代码」。失败返回 None（自证降级，不阻断）。
     """
     try:
         import hashlib
         base = Path(__file__).resolve().parent
         h = hashlib.sha1()
-        files = sorted([p for p in base.glob("*.py")] + [p for p in base.glob("*.yaml")],
-                       key=lambda p: p.name)
+        files = sorted([p for p in base.rglob("*.py")] + [p for p in base.rglob("*.yaml")],
+                       key=lambda p: str(p.relative_to(base)))
         for p in files:
             if not p.is_file():
                 continue
