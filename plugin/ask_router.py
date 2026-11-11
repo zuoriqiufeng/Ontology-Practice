@@ -70,9 +70,14 @@ def _config() -> dict:
         return {}
 
 
+def router_state() -> str:
+    """95：ask_router 三态 false|shadow|true（shadow=只跑并落 route_trace 不覆盖 legacy，取真基线）。"""
+    return str(_config().get("enabled") or "false").strip().lower()
+
+
 def router_enabled() -> bool:
-    """P2 起 ask() 据此决定是否前置 _route_v2；P1 默认关，仅框架/直测。"""
-    return bool(_config().get("enabled"))
+    """P2 起 ask() 据此决定是否前置 _route_v2；false 关。"""
+    return router_state() != "false"
 
 
 def validate_registry() -> list:
@@ -695,6 +700,11 @@ def attach_intents(payload: dict, sigs: list, primary) -> None:
         return
 
 
+
+# 95 号：route_trace 日志基名可被 conftest 覆盖（测试隔离，此前漏——测试会写生产 logs/）
+_ROUTE_TRACE_PATH: object | None = None
+
+
 def log_route_trace(question, sigs, primary, legacy=None) -> None:
     """落一条路由决策 trace（确定性、纯增量，不影响主输出，守 54 号 C）。
 
@@ -710,7 +720,7 @@ def log_route_trace(question, sigs, primary, legacy=None) -> None:
                              LOG_ROTATE_RETENTION_DAYS, resolve_log_path)
         from .log_rotate import rotate_day_file
         path = rotate_day_file(
-            resolve_log_path("route_trace_log.jsonl"),
+            (_ROUTE_TRACE_PATH if _ROUTE_TRACE_PATH is not None else resolve_log_path("route_trace_log.jsonl")),
             LOG_ROTATE_ROUTE_TRACE_MAX_BYTES, LOG_ROTATE_BACKUPS,
             retention_days=LOG_ROTATE_RETENTION_DAYS,
         )

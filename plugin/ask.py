@@ -15,7 +15,8 @@ import time
 
 from .code_origin import route as route_code
 from .constants import SYMPTOM_ALIASES
-from .ask_router import attach_intents, extract_all, log_route_trace, resolve_intent, router_enabled
+from .ask_router import (attach_intents, extract_all, log_route_trace, resolve_intent,
+                       router_enabled, router_state)
 
 _CODE = re.compile(r"(?<![A-Za-z0-9])((?:[A-Za-z]{1,8}[-_]?)?[0-9]{3,5})(?![0-9])")
 _NO_TOOL = {"answer": "", "evidence": [], "skills": [], "open": []}
@@ -86,6 +87,15 @@ def _route(q: str):
     return None, {}, {"origin": "unknown", "vendor": "", "ambiguous": False, "rule": "", "confidence": "low"}
 
 
+def _cache_version() -> str:
+    """缓存版本：插件指纹短 hash——插件代码一变缓存失效，避免跨版本脏命中。"""
+    try:
+        from .loaded_version import _plugin_fingerprint
+        return (str(_plugin_fingerprint() or ""))[:8]
+    except Exception:
+        return ""
+
+
 def ask(args, **kwargs):
     from .tools import HANDLERS, _init, _log_exempt_call  # 懒加载，避免 tools→ask→tools 循环
     _init()
@@ -94,7 +104,7 @@ def ask(args, **kwargs):
     # 89 号：意图分级（L0/L1/L2）——纯知识/含锚点/实测变更；供输出与 usage 标注
     from .tier_router import tier_classify
     tier, _tier_reason = tier_classify(q)
-    cache_key = (kwargs.get("task_id"), q, detail)
+    cache_key = (q, detail, _cache_version())  # 95: 答案缓存去 task_id（此前每会话一问一答 cache_hit 恒 0）
     if detail not in ("ref", "full", "all"):
         cached = _cache_get(cache_key)
         if cached is not None:
@@ -111,7 +121,7 @@ def ask(args, **kwargs):
         _sigs = extract_all(q)
         _primary = resolve_intent(q, signals=_sigs)
         log_route_trace(q, _sigs, _primary, legacy=(tool, sub, meta))
-        if _primary is not None:
+        if router_state() == "true" and _primary is not None:
             _shadow_note(q, _primary, meta)
             tool, sub, meta = _primary
     # 90 号：补齐信号后重算 tier（signal 判级 L1 生效）
