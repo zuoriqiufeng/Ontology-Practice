@@ -151,12 +151,9 @@ def _fetch_error_code(text, *, message="", db_hint="", log_source=""):
         origin = info.get("origin")
         if origin in ("unknown", "ambiguous"):
             continue
-        if origin == "product":
-            canonical = "-" + raw.lstrip("-")
-            conf = "high"
-        else:
-            canonical = raw
-            conf = "medium"
+        from .constants import normalize_error_code as _norm
+        canonical = _norm(raw) if origin == "product" else raw
+        conf = "high" if origin == "product" else "medium"
         key = (origin, canonical)
         if key in seen:
             continue

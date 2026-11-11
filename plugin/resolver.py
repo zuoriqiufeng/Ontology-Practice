@@ -764,13 +764,9 @@ class BKNResolver:
     @staticmethod
     def normalize_error_code(code: str) -> str:
         """规范化错误码格式: 4073 → -4073; ORA01555/ora-1555 → ORA-01555"""
-        code = (code or "").strip()
-        if re.match(r"^[0-9]{4}$", code):
-            return f"-{code}"
-        m = re.match(r"^(ORA|YAS)-?([0-9]{4,5})$", code, re.IGNORECASE)
-        if m:
-            return f"{m.group(1).upper()}-{m.group(2).zfill(5)}"
-        return code
+        # 96 号 3A：单一事实源在 constants.normalize_error_code
+        from .constants import normalize_error_code as _norm
+        return _norm(code)
 
     # ========== 解析工具 ==========
 

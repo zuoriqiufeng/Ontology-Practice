@@ -4,6 +4,9 @@
 新增数据库只需在此文件改一处。
 """
 
+import re
+
+
 # 89 意图分级锚点词表单源（单源，勿另抄）；prompt_sections 守则只引用不抄词
 TIER_CHANGE_WORDS = (
     "重启", "执行", "改配置", "修改", "调整", "删除", "删", "启动", "停止", "停掉",
@@ -133,6 +136,18 @@ ERROR_ALIASES = {
     "对象缺失": "ORA-00942",
     "PL/SQL编译错误": "ORA-24344",
 }
+
+def normalize_error_code(code: str) -> str:
+    """错误码归一单一事实源（96 号 3A）：4217 -> -4217；ORA1555/ora-1555 -> ORA-01555；YAS-02276 原样；其它原样。"""
+    s = (code or "").strip()
+    m = re.fullmatch(r"[0-9]{4}", s)
+    if m:
+        return "-" + s
+    m = re.fullmatch(r"(ORA|YAS)-?([0-9]{4,5})", s, re.I)
+    if m:
+        return "%s-%s" % (m.group(1).upper(), m.group(2).zfill(5))
+    return s
+
 
 SYMPTOM_ALIASES = {
     # 现场说法 → 规范症状 ID（值为 `symptom:` 后的裸 ID）
