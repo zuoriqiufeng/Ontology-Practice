@@ -29,3 +29,13 @@ symptom_patterns:
       - slow query
       - high latency
       - queue backlog
+
+  # 95(3.3): 产品缺陷类（无码/foreign_code；归类+指标，不驱动 db_link 路由）
+  - symptom: product_defect
+    any:
+      - clickhouse alter
+      - modify column default
+      - loader batch
+      - illegalargumentexception
+      - nullpointerexception
+      - npe

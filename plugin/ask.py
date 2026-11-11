@@ -120,7 +120,8 @@ def ask(args, **kwargs):
     if router_enabled():
         _sigs = extract_all(q)
         _primary = resolve_intent(q, signals=_sigs)
-        log_route_trace(q, _sigs, _primary, legacy=(tool, sub, meta))
+        log_route_trace(q, _sigs, _primary, legacy=(tool, sub, meta),
+                           task_id=kwargs.get("task_id"), session_id=kwargs.get("session_id"))
         if router_state() == "true" and _primary is not None:
             _shadow_note(q, _primary, meta)
             tool, sub, meta = _primary

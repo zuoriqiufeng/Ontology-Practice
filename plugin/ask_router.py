@@ -479,6 +479,17 @@ def _fetch_freetext(text, *, message="", db_hint="", log_source=""):
                    extra={"hint": "文类(回答风格参考)；不参与路由"})]
 
 
+def _fetch_mechanism(text, *, message="", db_hint="", log_source=""):
+    """95(D2A): 机制关键词 → mechanism 信号（走 diagnose_mechanism 专用路由）。"""
+    _kw = ("死锁", "卡死", "hang", "stuck", "全库回放", "死循环", "deadlock", "机制", "mechanism")
+    t = str(text or "").lower()
+    for kw in _kw:
+        if kw and kw.lower() in t:
+            return [Signal(kind="mechanism", raw=kw, canonical="mechanism", trust="pattern",
+                           confidence="low", source_rule="mechanism_keyword")]
+    return []
+
+
 _FETCHERS = {
     "error_code": _fetch_error_code,
     "symptom": _fetch_symptom,
@@ -488,6 +499,7 @@ _FETCHERS = {
     "alarm_simple": _fetch_alarm_simple,
     "stack": _fetch_stack,
     "log_pattern": _fetch_log_pattern,
+    "mechanism": _fetch_mechanism,
     "freetext": _fetch_freetext,
 }
 
@@ -705,7 +717,7 @@ def attach_intents(payload: dict, sigs: list, primary) -> None:
 _ROUTE_TRACE_PATH: object | None = None
 
 
-def log_route_trace(question, sigs, primary, legacy=None) -> None:
+def log_route_trace(question, sigs, primary, legacy=None, *, task_id="", session_id="") -> None:
     """落一条路由决策 trace（确定性、纯增量，不影响主输出，守 54 号 C）。
 
     仅在 ask_router 启用时调用；记录：抽取到的信号快照 + 命中主意图(route_id/tool/origin)。
@@ -727,6 +739,8 @@ def log_route_trace(question, sigs, primary, legacy=None) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         entry = {
             "timestamp": int(time.time()),
+            "task_id": str(task_id or "")[:48],
+            "session_id": str(session_id or "")[:48],
             "question": (question or "")[:120],
             "n_signals": len(sigs or []),
             "intents": [

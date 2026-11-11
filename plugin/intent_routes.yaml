@@ -27,6 +27,12 @@ routes:
     match: {kind: symptom}
     args: {symptom: canonical}
     note: 规范症状 → diagnose_db_link（origin=symptom）
+  - id: mechanism_branch
+    priority: 5
+    tool: diagnose_mechanism
+    match: {kind: mechanism}
+    args: {entry: text500}
+    note: 95(D2A)  机制关键词->diagnose_mechanism
   - id: operation
     priority: 3
     tool: resolve_operation
