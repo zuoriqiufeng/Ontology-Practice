@@ -54,8 +54,8 @@ def tier_classify(text: str, signals=None) -> tuple:
         if look and not _has_imperative(t):
             return ("L1", "变更词+查看且非祈使→只读查证")
         return ("L2", "含变更/操作意图")
-    if kinds & {"entity", "log_pattern"}:
-        return ("L1", "命中环境实体/日志模式信号")
+    if kinds & {"entity", "log_pattern", "symptom"}:
+        return ("L1", "命中环境实体/日志模式/症状信号")
     if look or anchor:
         return ("L1", "只读看/查或含环境锚点")
     return ("L0", "纯知识问答")

@@ -1,0 +1,31 @@
+# 94 号：无码 / 英文 / 日志模式 → 规范症状 ID 的模式表（单源之一）。
+# SYMPTOM_ALIASES 保留中文现场说法（别名）；本表补英文/日志动词。
+# 命中：any 中任一关键词（子串、不区分大小写）→ 产出 symptom 信号（trust=pattern, confidence=medium）。
+symptom_patterns:
+  - symptom: connection_error
+    any:
+      - cannot connect
+      - connect timeout
+      - connection refused
+      - connection reset
+      - connection lost
+      - connect failed
+      - unable to connect
+  - symptom: resource
+    any:
+      - out of memory
+      - no space left
+      - disk full
+      - oom
+      - killed
+  - symptom: crash_loop
+    any:
+      - segmentation fault
+      - restart loop
+      - watchdog
+      - crashing repeatedly
+  - symptom: performance_degradation
+    any:
+      - slow query
+      - high latency
+      - queue backlog

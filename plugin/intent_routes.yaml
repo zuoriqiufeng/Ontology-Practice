@@ -24,7 +24,7 @@ routes:
   - id: canonical_symptom
     priority: 2
     tool: diagnose_db_link
-    match: {kind: symptom, trust: alias}
+    match: {kind: symptom}
     args: {symptom: canonical}
     note: 规范症状 → diagnose_db_link（origin=symptom）
   - id: operation

@@ -163,6 +163,31 @@ def _fetch_error_code(text, *, message="", db_hint="", log_source=""):
     return hits
 
 
+_PATTERN_CACHE: list = []
+
+
+def _load_symptom_patterns():
+    if _PATTERN_CACHE:
+        return _PATTERN_CACHE
+    try:
+        import yaml
+        d = yaml.safe_load((_HERE / "symptom_patterns.yaml").read_text(encoding="utf-8")) or {}
+        _PATTERN_CACHE.extend(d.get("symptom_patterns") or [])
+    except Exception:
+        pass
+    return _PATTERN_CACHE
+
+
+def _pattern_symptom(text):
+    """94 号：英文/日志模式 → 规范症状 ID（命中首个模式即返回；无则 None）。"""
+    t = str(text or "").lower()
+    for _entry in _load_symptom_patterns():
+        for kw in (_entry.get("any") or []):
+            if kw and kw.lower() in t:
+                return _entry.get("symptom")
+    return None
+
+
 def _fetch_symptom(text, *, message="", db_hint="", log_source=""):
     from .constants import SYMPTOM_ALIASES
     hits, seen = [], set()
@@ -174,6 +199,11 @@ def _fetch_symptom(text, *, message="", db_hint="", log_source=""):
             seen.add(canon)
             hits.append(Signal(kind="symptom", raw=alias, canonical=canon, trust="alias",
                                confidence="medium", source_rule="symptom_alias"))
+    pat = _pattern_symptom(text)
+    if pat and pat not in seen:
+        seen.add(pat)
+        hits.append(Signal(kind="symptom", raw=pat, canonical=pat, trust="pattern",
+                           confidence="medium", source_rule="symptom_pattern"))
     return hits
 
 
@@ -201,7 +231,9 @@ def canonical_symptom(text: str) -> str:
         if alias in t:
             best = alias
             break
-    return SYMPTOM_ALIASES[best] if best else t
+    if best:
+        return SYMPTOM_ALIASES[best]
+    return _pattern_symptom(t) or t
 
 
 def _fetch_entity(text, *, message="", db_hint="", log_source=""):
@@ -560,7 +592,12 @@ def resolve_intent(text, *, db_hint="", log_source="", signals=None):
         if not cands:
             continue
         if len(cands) > 1:
-            continue  # 同路由多候选 → 歧义，不猜，回退
+            # 94：同路由多候选 → 取最高置信度且唯一者；并列歧义才继续回退
+            _best_conf = max(s.confidence for s in cands)
+            _tops = [s for s in cands if s.confidence == _best_conf]
+            if len(_tops) != 1:
+                continue
+            cands = _tops
         sig = cands[0]
         tool = route.get("tool")
         if not tool or tool == "null":
@@ -700,6 +737,13 @@ def log_route_trace(question, sigs, primary, legacy=None) -> None:
         else:
             # 88 号 A4：无主通道 → 显式标记并记 legacy 兜底去向（纯增量，不改行为）
             entry["route_decision"] = "no_primary_legacy_fallback"
+            _kinds = {s.kind for s in (sigs or [])}
+            if not _kinds:
+                entry["no_primary_reason"] = "no_signal"
+            elif "log_pattern" in _kinds and not ({"symptom", "error_code"} & _kinds):
+                entry["no_primary_reason"] = "freq_only"
+            else:
+                entry["no_primary_reason"] = "ambiguous"
             if legacy:
                 entry["legacy_route"] = {
                     "tool": legacy[0],
