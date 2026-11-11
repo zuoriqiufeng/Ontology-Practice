@@ -36,7 +36,7 @@ from .supplement import (
 from .supplement import _search_chunk_level, _search_mini_first, _expand_parents
 from .bm25 import PATTERN_META_KEYS
 from .constants import DB_ERROR_PREFIXES, SCENARIO_HINTS
-from .config import BKN_ROOT, SEARCH_CHUNK_MODE
+from .config import BKN_ROOT, SEARCH_CHUNK_MODE, SEARCH_OUTPUT_MAX_CHARS
 from .mechanism_detect import _leaf_mechanisms, _mech_roots, _mechanisms  # 87·O-15: 机制数据层外置
 
 
@@ -176,6 +176,31 @@ def _compact_search_result(data, max_chars=1200):
     if isinstance(compact, dict):
         compact["_compact"] = True
     return compact
+
+
+def _clip_search_content(data, budget):
+    """95(D3): 只对检索结果的内容字段按总字符量设上界（保留 query_count/truncated/mode 元键），
+    不整 dict 跑 _enforce_budget（那会剥 meta）。"""
+    if not budget or budget <= 0 or not isinstance(data, dict):
+        return data
+    import json as _j
+    total = len(_j.dumps(data, ensure_ascii=False))
+    if total <= budget:
+        return data
+    slots = []
+    for _lst in ("hits", "results"):
+        for _h in (data.get(_lst) or []):
+            if isinstance(_h, dict) and isinstance(_h.get("content"), str) and _h["content"]:
+                slots.append(_h)
+    if not slots:
+        return data
+    content_chars = sum(len(h["content"]) for h in slots)
+    noncontent = total - content_chars
+    avail = max(0, budget - noncontent)
+    ratio = min(1.0, avail / max(1, content_chars))
+    for _h in slots:
+        _h["content"] = _h["content"][:max(1, int(len(_h["content"]) * ratio))]
+    return data
 
 
 def _apply_output_budget(result, tool_name, limit=None):
@@ -1307,6 +1332,12 @@ def search_qdrant_handler(args, **kwargs):
             # 44 号 §6 批 3：call_detail 也要 args——本函数作用域内**没有** args（只有
             # normalized 后的 queries_spec），故由 handler 原样透传
             args=args))
+        if SEARCH_OUTPUT_MAX_CHARS > 0:
+            raw = _clip_search_content(raw, SEARCH_OUTPUT_MAX_CHARS)
+        if SEARCH_OUTPUT_MAX_CHARS > 0:
+            raw = _clip_search_content(raw, SEARCH_OUTPUT_MAX_CHARS)
+        if SEARCH_OUTPUT_MAX_CHARS > 0:
+            raw = _clip_search_content(raw, SEARCH_OUTPUT_MAX_CHARS)
         final = json.dumps(_apply_output_budget(_compact_search_result(raw, 1200) if args.get("compact") else raw, "search_qdrant"), ensure_ascii=False)
         # 批 4-2：统一埋点（置信度 + usage + 轨迹）；逐条 usage 记录仍由 batch_inner 负责
         _log_exempt_call("search_qdrant", args, kwargs, raw, final,
@@ -1581,6 +1612,8 @@ def search_qdrant_handler(args, **kwargs):
         })
 
     result = _filter_command_fields(result)
+    if SEARCH_OUTPUT_MAX_CHARS > 0:
+        result = _clip_search_content(result, SEARCH_OUTPUT_MAX_CHARS)
     final = json.dumps(_apply_output_budget(_compact_search_result(result, 1200) if args.get("compact") else result, "search_qdrant"), ensure_ascii=False)
     _log_exempt_call("search_qdrant", args, kwargs, result, final,
                      {"chunk_mode": chunk_mode, "top_k": top_k,
