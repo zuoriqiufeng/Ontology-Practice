@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import functools
 import json
+import logging
 import re
 import threading
 import time
@@ -453,6 +454,15 @@ def _timed_handler(fn, tool_name=None):
                 _ok, _val = _run_with_deadline(fn, _to, args, **kwargs)
                 if _ok:
                     return _val
+                _sid = _session_ctx(kwargs)
+                logging.getLogger(__name__).warning("search_qdrant 超时(%ss) task=%s session=%s —— wrapper 已返回超时 JSON（93 号补观测）",
+                               _to, _sid.get("task_id"), _sid.get("session_id"))
+                try:
+                    from .observability import track
+                    track("search_qdrant", layer="timeout", result="timeout",
+                          ms=round((time.monotonic() - _call_ctx.t0) * 1000))
+                except Exception:  # noqa: BLE001
+                    pass
                 return json.dumps({"error": "search_qdrant 超时(%ss)，已中止等待" % _to,
                                    "hint": "可缩小 top_k 或改用 compact"}, ensure_ascii=False)
             return fn(args, **kwargs)
