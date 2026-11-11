@@ -4,7 +4,7 @@
 每段 `## Relation:` 内 `关系类型` 字段为 graph 的 rel_type key (snake_case);
 `映射规则` 区逐行 `src` → `tgt` 入图 (实例级), 否则取 `源对象`/`目标对象` 单条入图 (类型级)。
 支持的关系类型 (29 种, 见 RELATION_TYPES):
-  B-域 (14): requires / implements / constrains / constrained_by / prerequisite / risks_of /
+  B-域 (14): requires / implements_technology / constrains / constrained_by / prerequisite / risks_of /
              has_action / references / runs_on / registered_on / supports / implements_skill /
              reads_from / writes_to
   O-域 (3):  has_class / diagnosed_by / observed_in
@@ -106,7 +106,7 @@ class RelationTraverser:
 
     RELATION_TYPES = [
         # ── B 域（14 种）──
-        "requires", "implements", "constrains", "constrained_by",
+        "requires", "implements_technology", "constrains", "constrained_by",
         "prerequisite", "risks_of", "has_action",
         "references", "runs_on", "registered_on", "supports",
         "implements_skill",

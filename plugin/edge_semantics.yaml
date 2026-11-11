@@ -66,7 +66,7 @@ symmetric:
 domains:
   # 关系类型 → 域归属（与 bkn/relations/RELATION_TYPES.md 的域分组同源；机器可读版本）
   # 纪律：键集须恰好等于 relations.RELATION_TYPES（lint _check_domain_map_consistency 强制，防漂移与幽灵键）。
-  "B-域": [runs_on, registered_on, supports, requires, constrains, implements, has_action, references, prerequisite, implements_skill, constrained_by, risks_of, reads_from, writes_to]
+  "B-域": [runs_on, registered_on, supports, requires, constrains, implements_technology, has_action, references, prerequisite, implements_skill, constrained_by, risks_of, reads_from, writes_to]
   "O-域": [has_class, diagnosed_by, observed_in]
   "运行时对象": [feeds, supervises, consumes, produces, monitors, suspected_in]
   "结构": [connects_to]
@@ -92,7 +92,7 @@ walk_policy:
   # 放行依据（02 号第七条④ 先论证后落）：
   #   ① 机制四边（triggers / amplifies / manifests_as / mitigated_by）——机制层的唯一入口，
   #      不放行则机制层永远不可达（L4 的 walkability=0 的直接原因）；
-  #   ② B 域六条（requires / constrains / implements / references / prerequisite / supports）——
+  #   ② B 域六条（requires / constrains / implements_technology / references / prerequisite / supports）——
   #      放行前与 has_action/constrained_by/risks_of 一起被排除，但**只有后三条有论证**，
   #      前六条属「顺手跟域一起排掉」，裁定 2 判为放行；
   #   ③ subclass_of——类层次自身（A ⊑ B 时 A 继承 B 的可继承域），裁定 2「要」。
@@ -119,7 +119,7 @@ walk_policy:
     - mitigated_by
     - requires
     - constrains
-    - implements
+    - implements_technology
     - references
     - prerequisite
     - supports

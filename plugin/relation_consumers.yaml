@@ -160,12 +160,12 @@ types:
   has_action:
     class: agent_only
     python_consumers: []
-    no_python_consumer_note: "对象 → 动作（37 条）。保留理由：resolve_operation 走的是 action 段的 capability/implements 字段而非此边；此边供 Agent 反查「这个对象能做什么」。**待评审项**：是否应让某 Tool 改走此边。"
+    no_python_consumer_note: "对象 → 动作（37 条）。保留理由：resolve_operation 走的是 action 段的 capability/implements_technology 字段而非此边；此边供 Agent 反查「这个对象能做什么」。**待评审项**：是否应让某 Tool 改走此边。"
 
-  implements:
+  implements_technology:
     class: agent_only
     python_consumers: []
-    no_python_consumer_note: "⚠ **同名陷阱**：此「边」（scenario.bkn 的 主体→技术/架构，10 条）**无消费者**；生产代码里被读的 `implements` 是 **Action 段的字段**（`- implements: skill:xxx`，见 resolver.py:1292 / tools.py:643），两者同名不同物。保留理由：语义层的「实现关系」；**待评审项**：是否需要在代码/文档中改名为避免混淆。"
+    no_python_consumer_note: "⚠ 边 `implements_technology`（scenario.bkn 主体→技术/架构，10 条）**无 Python 消费者**；生产代码里被读的 `implements` 是 **Action 段的字段**（`- implements: skill:xxx`，见 resolver.py:1292 / tools.py:643）。93 号 4A 已把该边改名为 `implements_technology` 以消与字段同名歧义。"
 
   # ── M-域（机制层；形已立、内容待填）────────────────────────────────
 
