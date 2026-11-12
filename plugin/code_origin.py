@@ -54,8 +54,11 @@ def product_codes() -> set:
 
 
 def _norm_product(code: str):
+    """96 号 3A 第1步：归一走 constants 单一事实源（集合仍存 sidecar 裸码，故同时容忍裸形）。"""
+    from .constants import normalize_error_code as _norm
+    canon = _norm(code)
     codes = product_codes()
-    for cand in (code, code.lstrip("-"), "-" + code.lstrip("-")):
+    for cand in (canon, canon.lstrip("-")):
         if cand in codes:
             return cand
     return None
