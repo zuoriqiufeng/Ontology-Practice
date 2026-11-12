@@ -76,6 +76,12 @@ def llm_request_middleware(**kwargs):
     if not block or MARKER in block:
         return None
     block = "\n\n" + MARKER + "\n" + block
+    # 7A: inject 卡片触达观测（此前命中不写任何事件）
+    try:
+        from .observability import track
+        track("inject_card", kind=hit[0], target=str(hit[1])[:60])
+    except Exception:
+        pass
     new_msgs = [dict(m) if isinstance(m, dict) else m for m in messages]
     sys_idx = None
     for i, m in enumerate(new_msgs):

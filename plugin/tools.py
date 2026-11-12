@@ -1323,6 +1323,7 @@ def search_qdrant_handler(args, **kwargs):
     拒绝 (HTTP 400: "content should be a string or a list")。
     """
     # ── 批量模式: queries 参数存在 → 线程池并行 ──
+    _qh_t0 = time.monotonic()  # 1C: search 内自计时（不依赖 _call_ctx threading.local）
     queries_spec = args.get("queries")
     if queries_spec and isinstance(queries_spec, list) and len(queries_spec) > 0:
         raw = json.loads(_search_qdrant_batch_inner(
@@ -1341,7 +1342,8 @@ def search_qdrant_handler(args, **kwargs):
         final = json.dumps(_apply_output_budget(_compact_search_result(raw, 1200) if args.get("compact") else raw, "search_qdrant"), ensure_ascii=False)
         # 批 4-2：统一埋点（置信度 + usage + 轨迹）；逐条 usage 记录仍由 batch_inner 负责
         _log_exempt_call("search_qdrant", args, kwargs, raw, final,
-                         {"mode": "parallel_batch", "queries": raw.get("query_count", 0)})
+                         {"mode": "parallel_batch", "queries": raw.get("query_count", 0),
+                          "duration_ms": int((time.monotonic() - _qh_t0) * 1000)})
         return final
 
     query = args.get("query", "")
@@ -1618,6 +1620,7 @@ def search_qdrant_handler(args, **kwargs):
     _log_exempt_call("search_qdrant", args, kwargs, result, final,
                      {"chunk_mode": chunk_mode, "top_k": top_k,
                       "hits": result.get("count", 0), "mode": "single",
+                       "duration_ms": int((time.monotonic() - _qh_t0) * 1000),
                       "code_rows": len(code_hits),
                       "code_row_chars": sum(len(h.get("content") or "") for h in code_hits),
                       "query": (query or "")[:120]})  # 21 号 P2 零命中治理需要「什么查询」

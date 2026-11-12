@@ -143,6 +143,13 @@ def ask(args, **kwargs):
             if enrich_items:
                 payload["enrichment"] = enrich_items
         payload["tier"] = tier
+        # 8A：L1 现场只读取证指路（route=none 时按守则12 给节点/路径）
+        if tier == "L1":
+            _anchors = [(s.canonical or s.raw) for s in _sigs
+                        if getattr(s, "kind", "") in ("entity", "db_type", "log_pattern")]
+            if _anchors:
+                payload["l1_readonly_hint"] = ("守则12：可按 L1 只读取证 <节点/路径> 申请现场数据："
+                                               + "、".join(dict.fromkeys(_anchors)))[:240]
         out = json.dumps(payload, ensure_ascii=False)
     else:
         _sub = sub
