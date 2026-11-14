@@ -2568,3 +2568,10 @@ HANDLERS = {name: _timed_handler(fn, name) for name, fn in {
     "bkn_ask": bkn_ask_handler,
     "check_plan": check_plan_handler,
 }.items()}
+
+
+# 101(4.4): handler 后缀统一——4 个无后缀 handler 补 _handler 别名（保留旧名，兼容 HANDLERS/测试）
+query_product_handler = query_product
+diagnose_error_handler = diagnose_error
+resolve_relation_handler = resolve_relation
+diagnose_mechanism_handler = diagnose_mechanism
