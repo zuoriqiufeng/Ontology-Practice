@@ -80,10 +80,13 @@ def _route(q: str):
         info["code"] = code
         info["code_detected"] = True
         return tool, args, info
-    for alias in sorted(SYMPTOM_ALIASES, key=len, reverse=True):
-        if alias and alias in q:
-            return ("diagnose_db_link", {"symptom": SYMPTOM_ALIASES[alias]},
-                    {"origin": "symptom", "vendor": "", "ambiguous": False, "rule": "symptom_alias", "confidence": "medium"})
+    # 101(1.3)：症状归一改用 canonical_symptom（中英/模式统一；94 的 symptom_patterns 在 legacy 也生效）
+    from .ask_router import canonical_symptom
+    _sym = canonical_symptom(q)
+    if _sym != q:
+        return ("diagnose_db_link", {"symptom": _sym},
+                {"origin": "symptom", "vendor": "", "ambiguous": False,
+                 "rule": "symptom_alias", "confidence": "medium"})
     return None, {}, {"origin": "unknown", "vendor": "", "ambiguous": False, "rule": "", "confidence": "low"}
 
 

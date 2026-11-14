@@ -179,8 +179,8 @@ def _compact_search_result(data, max_chars=1200):
 
 
 def _clip_search_content(data, budget):
-    """95(D3): 只对检索结果的内容字段按总字符量设上界（保留 query_count/truncated/mode 元键），
-    不整 dict 跑 _enforce_budget（那会剥 meta）。"""
+    """101(D3): 递归收集内容槽（顶层 hits[]、results[].hits[]、results[] 自身），按总字符量比例压缩
+    content；保留 query_count/truncated/mode 等 meta（不整 dict 跑 _enforce_budget）。"""
     if not budget or budget <= 0 or not isinstance(data, dict):
         return data
     import json as _j
@@ -188,10 +188,19 @@ def _clip_search_content(data, budget):
     if total <= budget:
         return data
     slots = []
-    for _lst in ("hits", "results"):
-        for _h in (data.get(_lst) or []):
-            if isinstance(_h, dict) and isinstance(_h.get("content"), str) and _h["content"]:
+
+    def _collect(lst):
+        for _h in (lst or []):
+            if not isinstance(_h, dict):
+                continue
+            if isinstance(_h.get("content"), str) and _h["content"]:
                 slots.append(_h)
+            for _k in ("hits", "results"):
+                if isinstance(_h.get(_k), list):
+                    _collect(_h[_k])
+
+    for _k in ("hits", "results"):
+        _collect(data.get(_k))
     if not slots:
         return data
     content_chars = sum(len(h["content"]) for h in slots)
@@ -1335,10 +1344,6 @@ def search_qdrant_handler(args, **kwargs):
             args=args))
         if SEARCH_OUTPUT_MAX_CHARS > 0:
             raw = _clip_search_content(raw, SEARCH_OUTPUT_MAX_CHARS)
-        if SEARCH_OUTPUT_MAX_CHARS > 0:
-            raw = _clip_search_content(raw, SEARCH_OUTPUT_MAX_CHARS)
-        if SEARCH_OUTPUT_MAX_CHARS > 0:
-            raw = _clip_search_content(raw, SEARCH_OUTPUT_MAX_CHARS)
         final = json.dumps(_apply_output_budget(_compact_search_result(raw, 1200) if args.get("compact") else raw, "search_qdrant"), ensure_ascii=False)
         # 批 4-2：统一埋点（置信度 + usage + 轨迹）；逐条 usage 记录仍由 batch_inner 负责
         _log_exempt_call("search_qdrant", args, kwargs, raw, final,
@@ -1372,7 +1377,8 @@ def search_qdrant_handler(args, **kwargs):
         final = json.dumps(result, ensure_ascii=False)
         # 批 4-2：早期返回路径此前完全无埋点，本次一并接入
         _log_exempt_call("search_qdrant", args, kwargs, result, final,
-                         {"mode": "report_only", "dimension": "__report__"})
+                         {"mode": "report_only", "dimension": "__report__",
+                          "duration_ms": int((time.monotonic() - _qh_t0) * 1000)})
         return final
 
     # ── 重置当前任务覆盖度 ──
@@ -1384,7 +1390,8 @@ def search_qdrant_handler(args, **kwargs):
         })
         final = json.dumps(result, ensure_ascii=False)
         _log_exempt_call("search_qdrant", args, kwargs, result, final,
-                         {"mode": "reset", "dimension": "__reset__"})
+                         {"mode": "reset", "dimension": "__reset__",
+                          "duration_ms": int((time.monotonic() - _qh_t0) * 1000)})
         return final
 
     if not query or not query.strip():
@@ -1394,7 +1401,8 @@ def search_qdrant_handler(args, **kwargs):
         })
         final = json.dumps(result, ensure_ascii=False)
         _log_exempt_call("search_qdrant", args, kwargs, result, final,
-                         {"mode": "single", "query": "", "hits": 0})
+                         {"mode": "single", "query": "", "hits": 0,
+                          "duration_ms": int((time.monotonic() - _qh_t0) * 1000)})
         return final
 
     result = {}
