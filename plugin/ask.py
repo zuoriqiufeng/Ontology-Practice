@@ -128,8 +128,9 @@ def ask(args, **kwargs):
         if router_state() == "true" and _primary is not None:
             _shadow_note(q, _primary, meta)
             tool, sub, meta = _primary
-    # 90 号：补齐信号后重算 tier（signal 判级 L1 生效）
-    tier, _tier_reason = tier_classify(q, signals=_sigs)
+    # 90/101：仅在拿到信号时重算 tier（无信号沿用上方初算，避免每次 ask 冗余重算）
+    if _sigs:
+        tier, _tier_reason = tier_classify(q, signals=_sigs)
     raw = ""
     enrich_items, enrich_err, enrich_top = [], "", 0.0
     if tool is None:

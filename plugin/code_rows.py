@@ -360,9 +360,15 @@ def blend_code_rows(code_hits: list[dict], base_hits: list[dict], top_k: int,
             if canonical:
                 codes.add(canonical)
                 codes.add(canonical.lstrip("-"))
+        # 101(2.3)：边界匹配（P-008 对齐），避免 14217 命中 4217 之类子串误判
+        _code_pat = None
+        _cs = [c for c in codes if c]
+        if _cs:
+            _code_pat = re.compile(r"(?<![0-9A-Za-z-])(?:" + "|".join(re.escape(c) for c in _cs) + r")(?![0-9])")
+
         def _rank(hit: dict) -> int:
             text = hit.get("content") or ""
-            return 0 if any(c and c in text for c in codes) else 1
+            return 0 if (_code_pat is not None and _code_pat.search(text)) else 1
         code_hits = list(code_hits)
         base_hits = sorted(base_hits, key=_rank)   # 稳定排序，同档保持原序
     out: list[dict] = []

@@ -475,16 +475,14 @@ def _load_embedding_model_with_timeout():
 
 def _get_embedding_model():
     global _embedding_model
-    if _embedding_model is False and _embedding_model_late is not None:
-        _embedding_model = _embedding_model_late
-    if _embedding_model is not None:
-        return _embedding_model if _embedding_model is not False else None
+    # 101(2.2)：late 收养与加载全部在锁内，避免并发首调用重复实例化
     with _lazy_init_lock:
         if _embedding_model is False and _embedding_model_late is not None:
             _embedding_model = _embedding_model_late
         if _embedding_model is None:
             _embedding_model = _load_embedding_model_with_timeout()
-    return _embedding_model if _embedding_model is not False else None
+        _m = _embedding_model
+    return _m if _m is not False else None
 
 
 def warmup_embedding_model():

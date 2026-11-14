@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import math
 import re
+import threading
 from collections import defaultdict
 from typing import Any
 
@@ -163,13 +164,16 @@ def rrf_fusion(dense_results: list[dict], sparse_results: list[dict],
 _bm25_indexes: dict[str, "BM25Scorer | None"] = {}  # {collection: index}
 _bm25_ready: set[str] = set()                        # 已尝试构建的集合
 _bm25_locks: dict[str, Any] = {}                     # 每集合一把构建锁（批量模式防并发重复 scroll）
+_LOCKS_GUARD = threading.Lock()                      # 101: 建锁本身要串行，避免并发首击互相覆盖
 
 
 def _get_lock(collection: str):
-    import threading
-    if collection not in _bm25_locks:
-        _bm25_locks[collection] = threading.Lock()
-    return _bm25_locks[collection]
+    with _LOCKS_GUARD:
+        _lk = _bm25_locks.get(collection)
+        if _lk is None:
+            _lk = threading.Lock()
+            _bm25_locks[collection] = _lk
+    return _lk
 
 
 def _build_index(client, collection: str) -> "BM25Scorer | None":

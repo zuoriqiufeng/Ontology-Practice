@@ -109,7 +109,7 @@ def check_round(attr_path: Path, cand_dir: Path) -> list[str]:
     # 注意：单元格匹配必须**逐行**（`[^|\n]`）——用 `[^|]` 会跨行吞并，把「值＝换行」误判为已填。
     s2 = sec.get("S2", "")
     for key in _S2_KEYS:
-        m = re.search(r"\|\s*[^|\n]*" + re.escape(key) + r"[^|\n]*\|([^|\n]*)\|", s2)
+        m = re.search(r"\|[ \t\n\r\f\v]*[^|\n]*" + re.escape(key) + r"[^|\n]*\|([^|\n]*)\|", s2)
         if not m or not m.group(1).strip().strip("*_"):
             problems.append(f"I10: S2 缺必答项或为空：{key}")
 

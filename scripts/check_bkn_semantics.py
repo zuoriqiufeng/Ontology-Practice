@@ -38,12 +38,12 @@ def main() -> int:
     has_action_check()
     ids = []
     for _f, ln in _lines():
-        m = re.match(r"^\s*id:\s*([^\s#]+)", ln)
+        m = re.match(r"^[ \t\n\r\f\v]*id:[ \t\n\r\f\v]*([^ \t\n\r\f\v#]+)", ln)
         if m:
             ids.append(m.group(1))
     dup = [k for k, v in Counter(ids).items() if v > 1]
     defined = set(ids)
-    ref_re = re.compile(r"^\s*(?:source|target|from|to)\s*:\s*([^\s#]+)")
+    ref_re = re.compile(r"^[ \t\n\r\f\v]*(?:source|target|from|to)[ \t\n\r\f\v]*:[ \t\n\r\f\v]*([^ \t\n\r\f\v#]+)")
     dangling = []
     for f, ln in _lines():
         m = ref_re.match(ln)

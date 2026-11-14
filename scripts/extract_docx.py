@@ -38,7 +38,7 @@ LF = chr(10)
 TAB = chr(9)
 
 # 标题层级：本仓文档混用 `Heading N` 与纯数字样式（`2` / `3` / `4`）两种写法。
-_HEADING_RE = re.compile(r"^(?:Heading\s*)?([1-9])$")
+_HEADING_RE = re.compile(r"^(?:Heading[ \t\n\r\f\v]*)?([1-9])$")
 
 
 def _level(style):

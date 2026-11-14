@@ -22,7 +22,7 @@ DOC_ROOT = REPO / "doc"
 _SKIP_PREFIX = ("http://", "https://", "#", "mailto:", "data:")
 _SKIP_SUBTREE = ("_archived", "audit")
 # 相对链接目标不含空白；含空白的多半是正文/代码块里的误读，不算链接
-_LINK_RE = re.compile(r"\]\s*\(([^)\s]+)\)")
+_LINK_RE = re.compile(r"\][ \t\n\r\f\v]*\(([^) \t\n\r\f\v]+)\)")
 
 
 def iter_md():
