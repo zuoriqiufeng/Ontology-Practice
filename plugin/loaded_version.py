@@ -90,6 +90,10 @@ def _emit_reload_event(from_version, record: dict, ms: int | None = None) -> Non
             _clear_retrieval_cache()
         except Exception:
             pass
+        changed = bool(from_version is not None and from_version != to_version)
+        # 101：同版本 register 噪声不落 usage（实测 110/111 为 from==to 的重复注册）；真换版才记
+        if from_version is not None and from_version == to_version:
+            return
         from .usage_log import log_usage
         rec_hash = record.get("record_hash") or record.get("version_hash") or ""
         log_usage("bkn_reload",
@@ -98,7 +102,7 @@ def _emit_reload_event(from_version, record: dict, ms: int | None = None) -> Non
                   to_version=to_version,
                   record_hash=str(rec_hash)[:16],
                   trigger=record.get("trigger"),
-                  changed=bool(from_version is not None and from_version != to_version),
+                  changed=changed,
                   ms=ms)
     except Exception:
         pass
