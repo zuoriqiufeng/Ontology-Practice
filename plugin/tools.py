@@ -2055,6 +2055,8 @@ def diagnose_db_link_handler(args, **kwargs):
         "guard": (
             "禁止在 required skill 未全部加载前输出最终排查方案。"
             "先 skill_view 加载全部 required skill，再结合 Qdrant 搜索结果输出完整方案。"
+            "若用户明确要求「线性执行/最少工具」，可先输出结论并显式标注「未加载 required skill: X」"
+            "（视为已声明偏离，不按违规处理），再按需补加载。"
         ),
     }
     result = {
